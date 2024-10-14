@@ -12,7 +12,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 import React from 'react';
-import _ from 'lodash';
+import truncate from 'lodash/truncate';
 
 export function IntegrationFields(props: any) {
   const config = props.integration;
@@ -21,6 +21,7 @@ export function IntegrationFields(props: any) {
   const search = {
     box: {
       incremental: true,
+      compressed: true,
     },
   };
 
@@ -32,7 +33,7 @@ export function IntegrationFields(props: any) {
       truncateText: true,
       render: (value, record) => (
         <EuiText data-test-subj={`${record.name}IntegrationLink`}>
-          {_.truncate(record.name, { length: 100 })}
+          {truncate(record.name, { length: 100 })}
         </EuiText>
       ),
     },
@@ -43,7 +44,7 @@ export function IntegrationFields(props: any) {
       truncateText: true,
       render: (value, record) => (
         <EuiText data-test-subj={`${record.type}IntegrationDescription`}>
-          {_.truncate(record.type, { length: 100 })}
+          {truncate(record.type, { length: 100 })}
         </EuiText>
       ),
     },
@@ -54,7 +55,7 @@ export function IntegrationFields(props: any) {
       truncateText: true,
       render: (value, record) => (
         <EuiText data-test-subj={`${record.type}IntegrationDescription`}>
-          {_.truncate(record.category, { length: 100 })}
+          {truncate(record.category, { length: 100 })}
         </EuiText>
       ),
     },
@@ -93,10 +94,10 @@ export function IntegrationFields(props: any) {
 
   return (
     <EuiPanel data-test-subj={`${config.name}-fields`}>
-      <EuiTitle>
-        <h2>Fields</h2>
+      <EuiTitle size="s">
+        <h3>Fields</h3>
       </EuiTitle>
-      <EuiSpacer size="l" />
+      <EuiSpacer size="s" />
       <EuiInMemoryTable
         itemId="id"
         loading={false}

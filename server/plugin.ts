@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { schema } from '@osd/config-schema';
 import {
   CoreSetup,
   CoreStart,
@@ -15,14 +16,17 @@ import {
 } from '../../../src/core/server';
 import { DataSourcePluginSetup } from '../../../src/plugins/data_source/server/types';
 import { DataSourceManagementPlugin } from '../../../src/plugins/data_source_management/public/plugin';
+import { observabilityPanelsID } from '../common/constants/shared';
 import { migrateV1IntegrationToV2Integration } from './adaptors/integrations/migrations';
 import { OpenSearchObservabilityPlugin } from './adaptors/opensearch_observability_plugin';
 import { PPLPlugin } from './adaptors/ppl_plugin';
 import { PPLParsers } from './parsers/ppl_parser';
+import { registerObservabilityUISettings } from './plugin_helper/register_settings';
 import { setupRoutes } from './routes/index';
 import {
-  searchSavedObject,
-  visualizationSavedObject,
+  getSearchSavedObject,
+  getVisualizationSavedObject,
+  notebookSavedObject,
 } from './saved_objects/observability_saved_object';
 import { AssistantPluginSetup, ObservabilityPluginSetup, ObservabilityPluginStart } from './types';
 
@@ -86,9 +90,9 @@ export class ObservabilityPlugin
       },
       management: {
         importableAndExportable: true,
-        getInAppUrl() {
+        getInAppUrl(obj) {
           return {
-            path: `/app/management/observability/settings`,
+            path: dataSourceEnabled ? '' : `/app/${observabilityPanelsID}#/${obj.id}`,
             uiCapabilitiesPath: 'advancedSettings.show',
           };
         },
@@ -216,8 +220,9 @@ export class ObservabilityPlugin
     // Register server side APIs
     setupRoutes({ router, client: openSearchObservabilityClient, dataSourceEnabled });
 
-    core.savedObjects.registerType(visualizationSavedObject);
-    core.savedObjects.registerType(searchSavedObject);
+    core.savedObjects.registerType(getVisualizationSavedObject(dataSourceEnabled));
+    core.savedObjects.registerType(getSearchSavedObject(dataSourceEnabled));
+    core.savedObjects.registerType(notebookSavedObject);
     core.capabilities.registerProvider(() => ({
       observability: {
         show: true,
@@ -225,6 +230,16 @@ export class ObservabilityPlugin
     }));
 
     assistantDashboards?.registerMessageParser(PPLParsers);
+    registerObservabilityUISettings(core.uiSettings);
+
+    core.uiSettings.register({
+      'observability:defaultDashboard': {
+        name: 'Observability default dashboard',
+        value: '',
+        description: 'The default dashboard to display in Observability overview page',
+        schema: schema.string(),
+      },
+    });
 
     return {};
   }

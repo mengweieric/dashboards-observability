@@ -4,7 +4,7 @@
  */
 
 import {
-  EuiButton,
+  EuiSmallButton,
   EuiInMemoryTable,
   EuiModal,
   EuiModalBody,
@@ -13,7 +13,7 @@ import {
   EuiModalHeaderTitle,
   EuiTableFieldDataColumnType,
 } from '@elastic/eui';
-import _ from 'lodash';
+import differenceBy from 'lodash/differenceBy';
 import React, { useState } from 'react';
 import {
   CreateAccelerationForm,
@@ -83,12 +83,12 @@ export const DeleteFieldsModal = ({
       </EuiModalBody>
 
       <EuiModalFooter>
-        <EuiButton onClick={() => setIsDeleteModalVisible(false)}>Cancel</EuiButton>
-        <EuiButton
+        <EuiSmallButton onClick={() => setIsDeleteModalVisible(false)}>Cancel</EuiSmallButton>
+        <EuiSmallButton
           onClick={() => {
             setAccelerationFormData({
               ...accelerationFormData,
-              skippingIndexQueryData: _.differenceBy(
+              skippingIndexQueryData: differenceBy(
                 accelerationFormData.skippingIndexQueryData,
                 selectedFields,
                 'id'
@@ -100,7 +100,7 @@ export const DeleteFieldsModal = ({
           fill
         >
           Delete
-        </EuiButton>
+        </EuiSmallButton>
       </EuiModalFooter>
     </EuiModal>
   );

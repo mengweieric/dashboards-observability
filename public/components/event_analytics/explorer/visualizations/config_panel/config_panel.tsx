@@ -5,14 +5,14 @@
 
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
-  EuiComboBox,
+  EuiCompressedComboBox,
   EuiComboBoxOptionOption,
   EuiIcon,
   EuiTabbedContent,
   EuiTabbedContentTab,
 } from '@elastic/eui';
 import hjson from 'hjson';
-import { find } from 'lodash';
+import find from 'lodash/find';
 import { ENABLED_VIS_TYPES } from '../../../../../../common/constants/shared';
 import { getVisTypeData } from '../../../../visualizations/charts/helpers/viz_types';
 import { TabContext } from '../../../hooks';
@@ -188,7 +188,7 @@ export const ConfigPanel = ({ visualizations, setCurVisId, callback }: any) => {
   return (
     <div className="cp__rightContainer">
       <div className="cp__rightHeader">
-        <EuiComboBox
+        <EuiCompressedComboBox
           aria-label="config chart selector"
           placeholder="Select a chart"
           options={memorizedVisualizationTypes}

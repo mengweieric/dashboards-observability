@@ -12,7 +12,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 import React from 'react';
-import _ from 'lodash';
+import truncate from 'lodash/truncate';
 import { ASSET_FILTER_OPTIONS } from '../../../../common/constants/integrations';
 import { SavedObject } from '../../../../../../src/core/types';
 
@@ -25,6 +25,7 @@ export function IntegrationAssets(props: {
   const search = {
     box: {
       incremental: true,
+      compressed: true,
     },
     filters: [
       {
@@ -39,6 +40,7 @@ export function IntegrationAssets(props: {
         })),
       },
     ],
+    compressed: true,
   };
 
   const tableColumns = [
@@ -49,7 +51,7 @@ export function IntegrationAssets(props: {
       truncateText: true,
       render: (value, record) => (
         <EuiText data-test-subj={`${record.id}IntegrationLink`}>
-          {_.truncate(record.name, {
+          {truncate(record.name, {
             length: 100,
           })}
         </EuiText>
@@ -61,7 +63,7 @@ export function IntegrationAssets(props: {
       truncateText: true,
       render: (_value, record) => (
         <EuiText data-test-subj={`${record.type}IntegrationDescription`}>
-          {_.truncate(record.type, { length: 100 })}
+          {truncate(record.type, { length: 100 })}
         </EuiText>
       ),
     },
@@ -83,10 +85,10 @@ export function IntegrationAssets(props: {
 
   return (
     <EuiPanel data-test-subj={`${config.name}-assets`}>
-      <EuiTitle>
-        <h2>Assets</h2>
+      <EuiTitle size="s">
+        <h3>Assets</h3>
       </EuiTitle>
-      <EuiSpacer size="l" />
+      <EuiSpacer size="s" />
       <EuiInMemoryTable
         itemId="id"
         loading={false}

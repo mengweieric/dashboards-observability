@@ -6,7 +6,7 @@
 
 import {
   EuiFieldSearch,
-  EuiFilterButton,
+  EuiSmallFilterButton,
   EuiFilterGroup,
   EuiFilterSelectItem,
   EuiPage,
@@ -14,7 +14,6 @@ import {
   EuiPopover,
   EuiPopoverTitle,
 } from '@elastic/eui';
-import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import { IntegrationHeader } from './integration_header';
 import { AvailableIntegrationsTable } from './available_integration_table';
@@ -72,7 +71,7 @@ export const CategoryFilters = ({ items, setItems }: CategoryFiltersProps) => {
   };
 
   const button = (
-    <EuiFilterButton
+    <EuiSmallFilterButton
       iconType="arrowDown"
       onClick={onButtonClick}
       isSelected={isPopoverOpen}
@@ -81,7 +80,7 @@ export const CategoryFilters = ({ items, setItems }: CategoryFiltersProps) => {
       numActiveFilters={items.filter((item) => item.checked).length}
     >
       Categories
-    </EuiFilterButton>
+    </EuiSmallFilterButton>
   );
 
   return (

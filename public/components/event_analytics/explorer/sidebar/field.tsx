@@ -5,6 +5,7 @@
 
 import {
   EuiBadge,
+  EuiSmallButtonIcon,
   EuiButtonIcon,
   EuiFlexGroup,
   EuiFlexItem,
@@ -15,7 +16,9 @@ import {
   EuiToolTip,
 } from '@elastic/eui';
 import { i18n } from '@osd/i18n';
-import { isEqual, toUpper, upperFirst } from 'lodash';
+import isEqual from 'lodash/isEqual';
+import toUpper from 'lodash/toUpper';
+import upperFirst from 'lodash/upperFirst';
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { DEFAULT_DATA_SOURCE_TYPE } from '../../../../../common/constants/data_sources';
@@ -220,7 +223,7 @@ export const Field = (props: IFieldProps) => {
         >
           <>
             {isFieldToggleButtonDisabled ? (
-              <EuiButtonIcon
+              <EuiSmallButtonIcon
                 color={selected ? 'danger' : 'primary'}
                 iconType={selected ? 'cross' : 'plusInCircleFilled'}
                 isDisabled
@@ -229,7 +232,7 @@ export const Field = (props: IFieldProps) => {
                 className="dscSidebarField__actionButton"
               />
             ) : (
-              <EuiButtonIcon
+              <EuiSmallButtonIcon
                 color={selected ? 'danger' : 'primary'}
                 iconType={selected ? 'cross' : 'plusInCircleFilled'}
                 onClick={(e: React.MouseEvent<HTMLButtonElement>) => {

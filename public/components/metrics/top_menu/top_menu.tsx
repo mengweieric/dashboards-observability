@@ -4,11 +4,12 @@
  */
 
 import {
-  EuiFieldText,
+  EuiButtonIcon,
+  EuiCompressedFieldText,
+  EuiCompressedSelect,
+  EuiCompressedSuperDatePicker,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiSelect,
-  EuiSuperDatePicker,
 } from '@elastic/eui';
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -26,10 +27,10 @@ export const TopMenu = () => {
   return (
     dateSpanFilter && (
       <>
-        <EuiFlexGroup gutterSize="s" justifyContent={'flexEnd'}>
+        <EuiFlexGroup gutterSize="s" justifyContent="spaceBetween" alignItems="center">
           <EuiFlexItem grow={false}>
             <div className="resolutionSelect">
-              <EuiFieldText
+              <EuiCompressedFieldText
                 className="resolutionSelectText"
                 prepend="Span Interval"
                 value={dateSpanFilter.span}
@@ -37,7 +38,7 @@ export const TopMenu = () => {
                 onChange={(e) => dispatch(setDateSpan({ span: e.target.value }))}
                 data-test-subj="metrics__spanValue"
                 append={
-                  <EuiSelect
+                  <EuiCompressedSelect
                     className="resolutionSelectOption"
                     options={resolutionOptions}
                     value={dateSpanFilter.resolution}
@@ -50,17 +51,33 @@ export const TopMenu = () => {
               />
             </div>
           </EuiFlexItem>
-          <EuiFlexItem className="metrics-search-bar-datepicker">
-            <EuiSuperDatePicker
-              dateFormat={uiSettingsService.get('dateFormat')}
-              start={dateSpanFilter.start}
-              end={dateSpanFilter.end}
-              onTimeChange={(dateSpan) => dispatch(setDateSpan(dateSpan))}
-              recentlyUsedRanges={dateSpanFilter.recentlyUsedRanges}
-            />
-          </EuiFlexItem>
           <EuiFlexItem grow={false}>
-            <MetricsExport />
+            <EuiFlexGroup gutterSize="s">
+              <EuiFlexItem grow={false}>
+                <EuiCompressedSuperDatePicker
+                  dateFormat={uiSettingsService.get('dateFormat')}
+                  start={dateSpanFilter.start}
+                  end={dateSpanFilter.end}
+                  onTimeChange={(dateSpan) => dispatch(setDateSpan(dateSpan))}
+                  recentlyUsedRanges={dateSpanFilter.recentlyUsedRanges}
+                  showUpdateButton={false}
+                />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <EuiButtonIcon
+                  iconType="refresh"
+                  aria-label="Refresh"
+                  display="base"
+                  onClick={() => dispatch(setDateSpan(dateSpanFilter))}
+                  size="s"
+                  data-test-subj="superDatePickerApplyTimeButton"
+                  data-click-metric-element="metrics.refresh_button"
+                />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <MetricsExport />
+              </EuiFlexItem>
+            </EuiFlexGroup>
           </EuiFlexItem>
         </EuiFlexGroup>
       </>

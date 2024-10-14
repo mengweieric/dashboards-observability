@@ -77,18 +77,21 @@ export function registerQueryAssistRoutes(router: IRouter) {
           .replace(/[\r\n]/g, ' ')
           .trim()
           .replace(/ISNOTNULL/g, 'isnotnull') // https://github.com/opensearch-project/sql/issues/2431
-          .replace(/`/g, '') // https://github.com/opensearch-project/dashboards-observability/issues/509, https://github.com/opensearch-project/dashboards-observability/issues/557
           .replace(/\bSPAN\(/g, 'span('); // https://github.com/opensearch-project/dashboards-observability/issues/759
         return response.ok({ body: ppl });
       } catch (error) {
         if (
           isResponseError(error) &&
           error.statusCode === 400 &&
-          error.body.includes(ERROR_DETAILS.GUARDRAILS_TRIGGERED)
+          // on opensearch >= 2.17, error.body is an object https://github.com/opensearch-project/ml-commons/pull/2858
+          JSON.stringify(error.body).includes(ERROR_DETAILS.GUARDRAILS_TRIGGERED)
         ) {
           return response.badRequest({ body: ERROR_DETAILS.GUARDRAILS_TRIGGERED });
         }
-        return response.custom({ statusCode: error.statusCode || 500, body: error.message });
+        return response.custom({
+          statusCode: error.statusCode || 500,
+          body: typeof error.body === 'string' ? error.body : JSON.stringify(error.body),
+        });
       }
     }
   );
@@ -156,11 +159,15 @@ export function registerQueryAssistRoutes(router: IRouter) {
         if (
           isResponseError(error) &&
           error.statusCode === 400 &&
-          error.body.includes(ERROR_DETAILS.GUARDRAILS_TRIGGERED)
+          // on opensearch >= 2.17, error.body is an object https://github.com/opensearch-project/ml-commons/pull/2858
+          JSON.stringify(error.body).includes(ERROR_DETAILS.GUARDRAILS_TRIGGERED)
         ) {
           return response.badRequest({ body: ERROR_DETAILS.GUARDRAILS_TRIGGERED });
         }
-        return response.custom({ statusCode: error.statusCode || 500, body: error.message });
+        return response.custom({
+          statusCode: error.statusCode || 500,
+          body: typeof error.body === 'string' ? error.body : JSON.stringify(error.body),
+        });
       }
     }
   );

@@ -6,10 +6,10 @@
 
 import {
   EuiBreadcrumb,
-  EuiButton,
+  EuiSmallButton,
   EuiContextMenuItem,
   EuiContextMenuPanel,
-  EuiFieldSearch,
+  EuiCompressedFieldSearch,
   EuiFlexGroup,
   EuiFlexItem,
   EuiHorizontalRule,
@@ -31,7 +31,8 @@ import {
 } from '@elastic/eui';
 import React, { ReactElement, useEffect, useState } from 'react';
 import moment from 'moment';
-import _ from 'lodash';
+import last from 'lodash/last';
+import truncate from 'lodash/truncate';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { coreRefs } from '../../framework/core_refs';
@@ -45,7 +46,6 @@ import { UI_DATE_FORMAT } from '../../../common/constants/shared';
 import { getCustomModal } from './helpers/modal_containers';
 import { CustomPanelListType, CustomPanelType } from '../../../common/types/custom_panels';
 import { getSampleDataModal } from '../common/helpers/add_sample_modal';
-import { pageStyles } from '../../../common/constants/shared';
 import { DeleteModal } from '../common/helpers/delete_modal';
 import {
   createPanel,
@@ -121,7 +121,8 @@ export const CustomPanelTable = ({
 
   const onCreate = async (newCustomPanelName: string) => {
     if (!isNameValid(newCustomPanelName)) {
-      setToast('Invalid Dashboard name', 'danger');
+      setToast('Invalid Dashboard Name', 'danger');
+      history.goBack();
     } else {
       const newPanel = newPanelTemplate(newCustomPanelName);
       dispatch(createPanel(newPanel));
@@ -131,7 +132,7 @@ export const CustomPanelTable = ({
 
   const onRename = async (newCustomPanelName: string) => {
     if (!isNameValid(newCustomPanelName)) {
-      setToast('Invalid Dashboard name', 'danger');
+      setToast('Invalid Dashboard Name', 'danger');
     } else {
       dispatch(renameCustomPanel(newCustomPanelName, selectedCustomPanels[0].id));
     }
@@ -140,7 +141,7 @@ export const CustomPanelTable = ({
 
   const onClone = async (newName: string) => {
     if (!isNameValid(newName)) {
-      setToast('Invalid Operational Panel name', 'danger');
+      setToast('Invalid Operational Panel Name', 'danger');
     } else {
       let sourcePanel = selectedCustomPanels[0];
       try {
@@ -153,7 +154,7 @@ export const CustomPanelTable = ({
           sourcePanel = legacyFetchResult.operationalPanel;
         }
 
-        const { id, ...newPanel } = {
+        const { ...newPanel } = {
           ...sourcePanel,
           title: newName,
         };
@@ -252,14 +253,14 @@ export const CustomPanelTable = ({
   };
 
   const popoverButton = (
-    <EuiButton
+    <EuiSmallButton
       data-test-subj="operationalPanelsActionsButton"
       iconType="arrowDown"
       iconSide="right"
       onClick={() => setIsActionsPopoverOpen(!isActionsPopoverOpen)}
     >
       Actions
-    </EuiButton>
+    </EuiSmallButton>
   );
 
   const popoverItems = (): ReactElement[] => [
@@ -315,8 +316,8 @@ export const CustomPanelTable = ({
       sortable: true,
       truncateText: true,
       render: (value, record) => (
-        <EuiLink href={`${_.last(parentBreadcrumbs)!.href}${record.id}`}>
-          {_.truncate(value, { length: 100 })}
+        <EuiLink href={`${last(parentBreadcrumbs)!.href}${record.id}`}>
+          {truncate(value, { length: 100 })}
         </EuiLink>
       ),
     },
@@ -335,14 +336,14 @@ export const CustomPanelTable = ({
   ] as Array<EuiTableFieldDataColumnType<CustomPanelListType>>;
 
   return (
-    <div style={pageStyles}>
+    <>
       <EuiPage>
         <EuiPageBody component="div">
           <EuiPageHeader>
             <EuiPageHeaderSection>
-              <EuiTitle size="l">
+              <EuiText size="s">
                 <h1>Observability dashboards</h1>
-              </EuiTitle>
+              </EuiText>
             </EuiPageHeaderSection>
           </EuiPageHeader>
           <EuiPageContent id="customPanelArea">
@@ -366,19 +367,15 @@ export const CustomPanelTable = ({
               <EuiPageContentHeaderSection>
                 <EuiFlexGroup gutterSize="s">
                   <EuiFlexItem>
-                    <EuiPopover
-                      panelPaddingSize="none"
-                      button={popoverButton}
-                      isOpen={isActionsPopoverOpen}
-                      closePopover={() => setIsActionsPopoverOpen(false)}
+                    <EuiSmallButton
+                      fill
+                      href="#/create"
+                      data-test-subj="customPanels__createNewPanels"
+                      iconType="plus"
+                      iconSide="left"
                     >
-                      <EuiContextMenuPanel items={popoverItems()} />
-                    </EuiPopover>
-                  </EuiFlexItem>
-                  <EuiFlexItem>
-                    <EuiButton fill href="#/create" data-test-subj="customPanels__createNewPanels">
                       Create Dashboard
-                    </EuiButton>
+                    </EuiSmallButton>
                   </EuiFlexItem>
                 </EuiFlexGroup>
               </EuiPageContentHeaderSection>
@@ -386,13 +383,25 @@ export const CustomPanelTable = ({
             <EuiHorizontalRule margin="m" />
             {customPanels.length > 0 ? (
               <>
-                <EuiFieldSearch
-                  fullWidth
-                  data-test-subj="operationalPanelSearchBar"
-                  placeholder="Search Observability Dashboard name"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <EuiFlexGroup gutterSize="s" alignItems="center">
+                  <EuiCompressedFieldSearch
+                    fullWidth
+                    data-test-subj="operationalPanelSearchBar"
+                    placeholder="Search Observability Dashboard name"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <EuiFlexItem>
+                    <EuiPopover
+                      panelPaddingSize="none"
+                      button={popoverButton}
+                      isOpen={isActionsPopoverOpen}
+                      closePopover={() => setIsActionsPopoverOpen(false)}
+                    >
+                      <EuiContextMenuPanel items={popoverItems()} size="s" />
+                    </EuiPopover>
+                  </EuiFlexItem>
+                </EuiFlexGroup>
                 <EuiHorizontalRule margin="m" />
                 <EuiInMemoryTable
                   loading={loading}
@@ -438,18 +447,20 @@ export const CustomPanelTable = ({
                 <EuiSpacer size="m" />
                 <EuiFlexGroup justifyContent="center">
                   <EuiFlexItem grow={false}>
-                    <EuiButton
+                    <EuiSmallButton
                       data-test-subj="customPanels__emptyCreateNewPanels"
                       fullWidth={false}
                       href="#/create"
+                      iconType="plus"
+                      iconSide="left"
                     >
                       Create Dashboard
-                    </EuiButton>
+                    </EuiSmallButton>
                   </EuiFlexItem>
                   <EuiFlexItem grow={false}>
-                    <EuiButton fullWidth={false} onClick={() => addSampledata()}>
+                    <EuiSmallButton fullWidth={false} onClick={() => addSampledata()}>
                       Add samples
-                    </EuiButton>
+                    </EuiSmallButton>
                   </EuiFlexItem>
                 </EuiFlexGroup>
                 <EuiSpacer size="xxl" />
@@ -459,6 +470,6 @@ export const CustomPanelTable = ({
         </EuiPageBody>
       </EuiPage>
       {isModalVisible && modalLayout}
-    </div>
+    </>
   );
 };

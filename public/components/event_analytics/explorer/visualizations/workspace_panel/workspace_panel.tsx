@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { isEmpty } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
 import { EuiPanel, EuiSwitch } from '@elastic/eui';
 import { Visualization } from '../../../../visualizations/visualization';
 import { DataTable } from '../../../../visualizations/charts/data_table/data_table';
@@ -26,21 +26,6 @@ export function WorkspacePanel({ visualizations }: IWorkSpacePanel) {
 
   return (
     <div className="explorerViz__commonPanel ws__workspace_visPanel">
-      <EuiPanel className="workspace_visPanel" paddingSize="s" color="plain" hasBorder={false}>
-        <EuiSwitch
-          className="workspace_visPanel--switch"
-          label="Table view"
-          type="button"
-          disabled={isEmpty(visualizations?.data?.explorer?.explorerData)}
-          checked={isTableViewOn}
-          onChange={() => {
-            setIsTableViewOn((staleState) => !staleState);
-          }}
-          aria-describedby="table view switcher"
-          data-test-subj="workspace__dataTableViewSwitch"
-          compressed
-        />
-      </EuiPanel>
       <EuiPanel
         paddingSize="s"
         className={`ws__workspace_visPanel--space ${

@@ -12,36 +12,36 @@ import {
   EuiPanel,
   EuiSpacer,
   EuiText,
-  EuiTitle,
 } from '@elastic/eui';
 import React from 'react';
+import { OPENSEARCH_CATALOG_URL } from '../../../../common/constants/integrations';
 
-export function IntegrationDetails(props: any) {
+export function IntegrationDetails(props: { integration: IntegrationConfig }) {
   const config = props.integration;
-  let screenshots;
-  if (config.statics.gallery) {
-    screenshots = config.statics.gallery;
-  }
 
   return (
     <EuiPanel data-test-subj={`${config.name}-details`}>
-      <EuiTitle>
-        <h2>Details</h2>
-      </EuiTitle>
-      <EuiSpacer />
+      <EuiSpacer size="s" />
       <EuiFlexGroup>
         <EuiFlexItem>
-          <EuiText>
+          <EuiText size="m">
             <h4>Version</h4>
           </EuiText>
-          <EuiSpacer size="m" />
-          <EuiText size="m">{config.version}</EuiText>
+          <EuiFlexGroup direction="row" alignItems="center" responsive={false} gutterSize="xs">
+            <EuiFlexItem grow={false}>
+              <EuiText size="m">{config.version}</EuiText>
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiText size="xs">
+                <EuiLink href={OPENSEARCH_CATALOG_URL}>Check for new versions</EuiLink>
+              </EuiText>
+            </EuiFlexItem>
+          </EuiFlexGroup>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiText>
+          <EuiText size="m">
             <h4>Category</h4>
           </EuiText>
-          <EuiSpacer size="m" />
           <EuiBadgeGroup>
             {config.labels?.map((label: string) => {
               return <EuiBadge>{label}</EuiBadge>;
@@ -49,28 +49,27 @@ export function IntegrationDetails(props: any) {
           </EuiBadgeGroup>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiText>
-            <h4>Contributer</h4>
+          <EuiText size="m">
+            <h4>Contributor</h4>
           </EuiText>
-          <EuiSpacer size="m" />
-          <EuiLink href={config.sourceUrl} external={true} target="blank">
-            {config.author}
-          </EuiLink>
+          <EuiText size="s">
+            <EuiLink href={config.sourceUrl} external={true} target="blank">
+              {config.author}
+            </EuiLink>
+          </EuiText>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiText>
+          <EuiText size="m">
             <h4>License</h4>
           </EuiText>
-          <EuiSpacer size="m" />
-          <EuiText size="m">{config.license}</EuiText>
+          <EuiText size="s">{config.license}</EuiText>
         </EuiFlexItem>
       </EuiFlexGroup>
       <EuiFlexItem>
-        <EuiText>
+        <EuiText size="m">
           <h4>Description</h4>
         </EuiText>
-        <EuiSpacer size="m" />
-        <EuiText size="m">{config.description}</EuiText>
+        <EuiText size="s">{config.description}</EuiText>
       </EuiFlexItem>
     </EuiPanel>
   );

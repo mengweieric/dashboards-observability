@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { isEmpty } from 'lodash';
+import isEmpty from 'lodash/isEmpty';
 import { useRef, useState } from 'react';
 import { batch, useDispatch, useSelector } from 'react-redux';
 import {
@@ -52,7 +52,7 @@ export const useFetchEvents = ({ pplService, requestParams }: IFetchEventsParams
   ) => {
     setIsEventsLoading(true);
     return pplService
-      .fetch({ query, format }, errorHandler)
+      .fetch({ query, format }, undefined, errorHandler)
       .then((res: any) => handler(res))
       .catch((err: any) => {
         console.error(err);
@@ -193,7 +193,7 @@ export const useFetchEvents = ({ pplService, requestParams }: IFetchEventsParams
     );
   };
 
-  const getEvents = (
+  const getEvents = async (
     query: string = '',
     errorHandler?: (error: any) => void,
     setSummaryStatus?: boolean
@@ -201,7 +201,7 @@ export const useFetchEvents = ({ pplService, requestParams }: IFetchEventsParams
     if (isEmpty(query)) return;
     const cur = queriesRef.current;
     const searchQuery = isEmpty(query) ? cur![requestParams.tabId][FINAL_QUERY] : query;
-    fetchEvents(
+    await fetchEvents(
       { query: searchQuery },
       'jdbc',
       async (res: any) => {

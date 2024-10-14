@@ -9,10 +9,9 @@ import {
   EuiFlexGroup,
   EuiFlexItem,
   EuiSpacer,
-  EuiFieldSearch,
+  EuiCompressedFieldSearch,
   EuiButtonGroup,
 } from '@elastic/eui';
-import _ from 'lodash';
 import React, { useState } from 'react';
 import {
   AvailableIntegrationsCardViewProps,
@@ -28,9 +27,7 @@ export function AvailableIntegrationsCardView(props: AvailableIntegrationsCardVi
   const getImage = (url?: string) => {
     let optionalImg;
     if (url) {
-      optionalImg = (
-        <img style={{ height: 100, width: 100 }} alt="" className="synopsisIcon" src={url} />
-      );
+      optionalImg = <img alt="" className="synopsisIcon" src={url} />;
     }
     return optionalImg;
   };
@@ -91,7 +88,7 @@ export function AvailableIntegrationsCardView(props: AvailableIntegrationsCardVi
     <EuiPanel>
       <EuiFlexGroup gutterSize="s">
         <EuiFlexItem>
-          <EuiFieldSearch
+          <EuiCompressedFieldSearch
             fullWidth
             isClearable={false}
             placeholder="Search..."
