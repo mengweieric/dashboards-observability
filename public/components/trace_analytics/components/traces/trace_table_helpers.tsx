@@ -18,7 +18,7 @@ import moment from 'moment';
 import React from 'react';
 import { TRACE_ANALYTICS_DATE_FORMAT } from '../../../../../common/constants/trace_analytics';
 import { TraceAnalyticsMode, TraceQueryMode } from '../../../../../common/types/trace_analytics';
-import { nanoToMilliSec } from '../common/helper_functions';
+import { appendModeToTraceViewUri, nanoToMilliSec } from '../common/helper_functions';
 
 export const fetchDynamicColumns = (columnItems: string[]) => {
   return columnItems
@@ -52,7 +52,6 @@ export const fetchDynamicColumns = (columnItems: string[]) => {
 };
 
 export const getTableColumns = (
-  showAttributes: boolean,
   columnItems: string[],
   mode: TraceAnalyticsMode,
   tracesTableMode: TraceQueryMode,
@@ -73,33 +72,53 @@ export const getTableColumns = (
       '-'
     );
 
-  const renderTraceLinkField = (item: string) => (
-    <EuiFlexGroup gutterSize="s" alignItems="center">
-      <EuiFlexItem grow={false}>
-        <EuiLink
-          data-test-subj="trace-link"
-          {...(getTraceViewUri && { href: getTraceViewUri(item) })}
-          {...(openTraceFlyout && { onClick: () => openTraceFlyout(item) })}
-        >
-          <EuiText size="s" className="traces-table traces-table-trace-id" title={item}>
-            {item}
-          </EuiText>
-        </EuiLink>
-      </EuiFlexItem>
-      <EuiFlexItem grow={false}>
-        <EuiCopy textToCopy={item}>
-          {(copy) => (
-            <EuiButtonIcon aria-label="Copy trace id" iconType="copyClipboard" onClick={copy} />
-          )}
-        </EuiCopy>
-      </EuiFlexItem>
-    </EuiFlexGroup>
-  );
+  const renderTraceLinkField = (item: string) => {
+    // Extract the current mode from the URL or session storage
+    const currentUrl = window.location.href;
+    const traceMode =
+      new URLSearchParams(currentUrl.split('?')[1]).get('mode') ||
+      sessionStorage.getItem('TraceAnalyticsMode');
+
+    return (
+      <EuiFlexGroup gutterSize="s" alignItems="center">
+        <EuiFlexItem grow={false}>
+          <EuiLink
+            data-test-subj="trace-link"
+            href={appendModeToTraceViewUri(item, getTraceViewUri, traceMode)}
+            {...(openTraceFlyout && { onClick: () => openTraceFlyout(item) })}
+          >
+            <EuiText size="s" className="traces-table traces-table-trace-id" title={item}>
+              {item}
+            </EuiText>
+          </EuiLink>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
+          <EuiCopy textToCopy={item}>
+            {(copy) => (
+              <EuiButtonIcon aria-label="Copy trace id" iconType="copyClipboard" onClick={copy} />
+            )}
+          </EuiCopy>
+        </EuiFlexItem>
+      </EuiFlexGroup>
+    );
+  };
 
   const renderErrorsField = (item: number) =>
     item == null ? (
       '-'
     ) : +item > 0 ? (
+      <EuiText color="danger" size="s">
+        Yes
+      </EuiText>
+    ) : (
+      'No'
+    );
+
+  const renderStatusCodeErrorsField = (item: number) =>
+    item === undefined || item === null ? (
+      '-'
+    ) : item === 2 ? (
+      // 2 means Error, 1 means OK, 0 means Unset
       <EuiText color="danger" size="s">
         Yes
       </EuiText>
@@ -158,7 +177,7 @@ export const getTableColumns = (
         name: 'Errors',
         align: 'right',
         sortable: true,
-        render: renderErrorsField,
+        render: renderStatusCodeErrorsField,
       },
       {
         field: 'endTime',
@@ -168,7 +187,7 @@ export const getTableColumns = (
         render: renderDateField,
         className: 'span-group-column',
       },
-      ...(showAttributes ? fetchDynamicColumns(columnItems) : []),
+      ...fetchDynamicColumns(columnItems),
     ] as Array<EuiTableFieldDataColumnType<any>>;
   }
 

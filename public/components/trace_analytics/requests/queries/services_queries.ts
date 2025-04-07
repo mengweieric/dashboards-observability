@@ -8,10 +8,7 @@ import {
   SERVICE_MAP_MAX_NODES,
 } from '../../../../../common/constants/trace_analytics';
 import { TraceAnalyticsMode } from '../../../../../common/types/trace_analytics';
-import {
-  getServiceIndices,
-  getServiceMapTargetResources,
-} from '../../components/common/helper_functions';
+import { getServiceIndices } from '../../components/common/helper_functions';
 import { ServiceObject } from '../../components/common/plots/service_map';
 
 export const getServicesQuery = (
@@ -93,52 +90,7 @@ export const getServicesQuery = (
   return query;
 };
 
-export const getRelatedServicesQuery = (serviceName: string) => {
-  const query = {
-    size: 0,
-    query: {
-      bool: {
-        must: [],
-        filter: [],
-        should: [],
-        must_not: [],
-      },
-    },
-    aggs: {
-      traces: {
-        terms: {
-          field: 'traceId',
-          size: 10000,
-        },
-        aggs: {
-          all_services: {
-            terms: {
-              field: 'serviceName',
-              size: 10000,
-            },
-          },
-          service: {
-            filter: {
-              bool: {
-                must: [
-                  {
-                    term: {
-                      serviceName,
-                    },
-                  },
-                ],
-                must_not: [],
-              },
-            },
-          },
-        },
-      },
-    },
-  };
-  return query;
-};
-
-export const getServiceNodesQuery = (mode: TraceAnalyticsMode) => {
+export const getServiceMapQuery = (mode: TraceAnalyticsMode) => {
   return {
     index: getServiceIndices(mode),
     size: 0,
@@ -157,57 +109,47 @@ export const getServiceNodesQuery = (mode: TraceAnalyticsMode) => {
           size: SERVICE_MAP_MAX_NODES,
         },
         aggs: {
-          trace_group: {
+          target_resource: {
             terms: {
-              field: 'traceGroupName',
+              field: 'target.resource',
+              size: SERVICE_MAP_MAX_EDGES,
+            },
+          },
+          target_edges: {
+            terms: {
+              field: 'target.resource',
               size: SERVICE_MAP_MAX_EDGES,
             },
             aggs: {
-              target_resource: {
+              service: {
                 terms: {
-                  field: 'target.resource',
+                  field: 'target.serviceName',
+                  size: SERVICE_MAP_MAX_EDGES,
+                },
+              },
+              domain: {
+                terms: {
+                  field: 'target.domain',
                   size: SERVICE_MAP_MAX_EDGES,
                 },
               },
             },
           },
-        },
-      },
-    },
-  };
-};
-
-export const getServiceEdgesQuery = (
-  source: 'destination' | 'target',
-  mode: TraceAnalyticsMode
-) => {
-  return {
-    index: getServiceIndices(mode),
-    size: 0,
-    query: {
-      bool: {
-        must: [],
-        filter: [],
-        should: [],
-        must_not: [],
-      },
-    },
-    aggs: {
-      service_name: {
-        terms: {
-          field: 'serviceName',
-          size: SERVICE_MAP_MAX_EDGES,
-        },
-        aggs: {
-          resource: {
+          destination_edges: {
             terms: {
-              field: `${source}.resource`,
+              field: 'destination.resource',
               size: SERVICE_MAP_MAX_EDGES,
             },
             aggs: {
+              service: {
+                terms: {
+                  field: 'destination.serviceName',
+                  size: SERVICE_MAP_MAX_EDGES,
+                },
+              },
               domain: {
                 terms: {
-                  field: `${source}.domain`,
+                  field: 'destination.domain',
                   size: SERVICE_MAP_MAX_EDGES,
                 },
               },
@@ -225,24 +167,9 @@ export const getServiceMetricsQuery = (
   map: ServiceObject,
   mode: TraceAnalyticsMode
 ) => {
-  const traceGroupFilter = new Set(
-    DSL?.query?.bool.must
-      .filter((must: any) => must.term?.['traceGroup'])
-      .map((must: any) => must.term.traceGroup) || []
+  const targetResource = [].concat(
+    ...Object.keys(map).map((service) => map[service].targetResources)
   );
-
-  const targetResource =
-    traceGroupFilter.size > 0
-      ? [].concat(
-          ...[].concat(
-            ...serviceNames.map((service) =>
-              map[service].traceGroups
-                .filter((traceGroup) => traceGroupFilter.has(traceGroup.traceGroup))
-                .map((traceGroup) => traceGroup.targetResource)
-            )
-          )
-        )
-      : [].concat(...Object.keys(map).map((service) => getServiceMapTargetResources(map, service)));
   const jaegerQuery: any = {
     size: 0,
     query: {

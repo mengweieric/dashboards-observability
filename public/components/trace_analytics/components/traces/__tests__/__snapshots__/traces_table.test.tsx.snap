@@ -295,6 +295,7 @@ exports[`Traces table component renders empty traces table message 2`] = `
         />
       </EuiHorizontalRule>
       <NoMatchMessage
+        mode="data_prepper"
         size="xl"
       >
         <EuiSpacer
@@ -1121,12 +1122,13 @@ exports[`Traces table component renders jaeger traces table 1`] = `
                                       >
                                         <EuiLink
                                           data-test-subj="trace-link"
+                                          href="#/trace_analytics/traces/00079a615e31e61766fcb20b557051c1"
                                         >
-                                          <button
+                                          <a
                                             className="euiLink euiLink--primary"
                                             data-test-subj="trace-link"
-                                            disabled={false}
-                                            type="button"
+                                            href="#/trace_analytics/traces/00079a615e31e61766fcb20b557051c1"
+                                            rel="noreferrer"
                                           >
                                             <EuiText
                                               className="traces-table traces-table-trace-id"
@@ -1140,7 +1142,7 @@ exports[`Traces table component renders jaeger traces table 1`] = `
                                                 00079a615e31e61766fcb20b557051c1
                                               </div>
                                             </EuiText>
-                                          </button>
+                                          </a>
                                         </EuiLink>
                                       </div>
                                     </EuiFlexItem>
@@ -1874,6 +1876,7 @@ exports[`Traces table component renders traces table 1`] = `
               "align": "right",
               "field": "latency",
               "name": "Duration (ms)",
+              "render": [Function],
               "sortable": true,
               "truncateText": true,
             },
@@ -1961,6 +1964,7 @@ exports[`Traces table component renders traces table 1`] = `
                 "align": "right",
                 "field": "latency",
                 "name": "Duration (ms)",
+                "render": [Function],
                 "sortable": true,
                 "truncateText": true,
               },
@@ -2686,12 +2690,13 @@ exports[`Traces table component renders traces table 1`] = `
                                       >
                                         <EuiLink
                                           data-test-subj="trace-link"
+                                          href="#/trace_analytics/traces/00079a615e31e61766fcb20b557051c1"
                                         >
-                                          <button
+                                          <a
                                             className="euiLink euiLink--primary"
                                             data-test-subj="trace-link"
-                                            disabled={false}
-                                            type="button"
+                                            href="#/trace_analytics/traces/00079a615e31e61766fcb20b557051c1"
+                                            rel="noreferrer"
                                           >
                                             <EuiText
                                               className="traces-table traces-table-trace-id"
@@ -2705,7 +2710,7 @@ exports[`Traces table component renders traces table 1`] = `
                                                 00079a615e31e61766fcb20b557051c1
                                               </div>
                                             </EuiText>
-                                          </button>
+                                          </a>
                                         </EuiLink>
                                       </div>
                                     </EuiFlexItem>
@@ -2851,7 +2856,7 @@ exports[`Traces table component renders traces table 1`] = `
                               }
                             }
                             setScopeRow={false}
-                            textOnly={true}
+                            textOnly={false}
                             truncateText={true}
                           >
                             <td
@@ -2868,13 +2873,9 @@ exports[`Traces table component renders traces table 1`] = `
                                 Duration (ms)
                               </div>
                               <div
-                                className="euiTableCellContent euiTableCellContent--alignRight euiTableCellContent--truncateText"
+                                className="euiTableCellContent euiTableCellContent--alignRight euiTableCellContent--truncateText euiTableCellContent--overflowingContent"
                               >
-                                <span
-                                  className="euiTableCellContent__text"
-                                >
-                                  19.91
-                                </span>
+                                19.91
                               </div>
                             </td>
                           </EuiTableRowCell>

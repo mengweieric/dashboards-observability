@@ -336,7 +336,7 @@ export function DashboardTable(props: {
                 inverted: false,
                 disabled: false,
               });
-              if (props.page !== 'app') {
+              if (!['app', 'traces'].includes(props.page)) {
                 props.setRedirect(true);
                 location.assign('#/traces');
               }
@@ -391,7 +391,7 @@ export function DashboardTable(props: {
     },
   });
 
-  const onTableChange = async ({ page, sort }: CriteriaWithPagination<any>) => {
+  const onTableChange = async ({ _page, sort }: CriteriaWithPagination<any>) => {
     if (typeof sort?.field !== 'string') return;
     setSorting({ sort } as { sort: PropertySort });
   };
@@ -402,7 +402,7 @@ export function DashboardTable(props: {
         {titleBar}
         <EuiSpacer size="m" />
         <EuiHorizontalRule margin="none" />
-        {props.items?.length > 0 ? (
+        {props.items?.length > 0 || props.loading ? (
           <EuiInMemoryTable
             data-test-subj="dashboardTable"
             tableLayout="auto"

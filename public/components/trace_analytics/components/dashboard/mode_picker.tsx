@@ -4,21 +4,15 @@
  */
 
 import {
-  EuiFlexGroup,
-  EuiFlexItem,
-  EuiIcon,
+  EuiBetaBadge,
   EuiPopover,
-  EuiPopoverFooter,
   EuiPopoverTitle,
   EuiSelectable,
-  EuiSmallButton,
   EuiSmallButtonEmpty,
-  EuiText,
   EuiToolTip,
 } from '@elastic/eui';
 import React, { useState } from 'react';
 import { TraceAnalyticsMode } from '../../../../../common/types/trace_analytics';
-import { CustomIndexFlyout } from '../common/custom_index_flyout';
 
 const labels = new Map([
   ['jaeger', 'Jaeger'],
@@ -36,7 +30,6 @@ export function DataSourcePicker(props: {
 }) {
   const { modes = [], selectedMode, setMode } = props;
   const [isPopoverOpen, setPopoverIsOpen] = useState(false);
-  const [isFlyoutVisible, setIsFlyoutVisible] = useState(false);
 
   const trigger = {
     label: labels.get(selectedMode),
@@ -62,6 +55,28 @@ export function DataSourcePicker(props: {
     );
   };
 
+  const updateUrlWithMode = (key: TraceAnalyticsMode) => {
+    const currentUrl = window.location.href.split('#')[0];
+    const hash = window.location.hash;
+
+    if (hash) {
+      const [hashPath, hashQueryString] = hash.substring(1).split('?');
+      const queryParams = new URLSearchParams(hashQueryString || '');
+      queryParams.set('mode', key);
+
+      const newHash = `${hashPath}?${queryParams.toString()}`;
+      const newUrl = `${currentUrl}#${newHash}`;
+      window.history.replaceState(null, '', newUrl);
+    } else {
+      // Non-hash-based URL
+      const queryParams = new URLSearchParams(window.location.search);
+      queryParams.set('mode', key);
+
+      const newUrl = `${currentUrl}?${queryParams.toString()}`;
+      window.history.replaceState(null, '', newUrl);
+    }
+  };
+
   return (
     <>
       <EuiPopover
@@ -84,6 +99,14 @@ export function DataSourcePicker(props: {
               label: x.title,
               key: x.id,
               value: x.id,
+              prepend:
+                x.id === 'custom_data_prepper' ? (
+                  <EuiToolTip content="Custom source is an experimental feature, Configure traces and services indexes in advanced settings">
+                    <EuiBetaBadge size="s" label="E" color="subdued" />
+                  </EuiToolTip>
+                ) : (
+                  <></>
+                ),
               checked: x.id === selectedMode ? 'on' : undefined,
               'data-test-subj': x.id + '-mode',
             }))}
@@ -94,6 +117,7 @@ export function DataSourcePicker(props: {
                 key: TraceAnalyticsMode;
               };
               setMode(choice.key);
+              updateUrlWithMode(choice.key);
               setPopoverIsOpen(false);
               sessionStorage.setItem('TraceAnalyticsMode', choice.key);
             }}
@@ -108,33 +132,8 @@ export function DataSourcePicker(props: {
               </>
             )}
           </EuiSelectable>
-          <EuiPopoverFooter>
-            <EuiFlexGroup gutterSize="s">
-              <EuiFlexItem grow={false}>
-                <EuiSmallButton
-                  onClick={() => {
-                    setIsFlyoutVisible(true);
-                    setPopoverIsOpen(false);
-                  }}
-                >
-                  Manage custom source
-                </EuiSmallButton>
-              </EuiFlexItem>
-              <EuiFlexItem grow={false}>
-                <EuiText>
-                  <EuiToolTip content="Custom trace and service indices is an experimental feature">
-                    <EuiIcon type="iInCircle" />
-                  </EuiToolTip>
-                </EuiText>
-              </EuiFlexItem>
-            </EuiFlexGroup>
-          </EuiPopoverFooter>
         </div>
       </EuiPopover>
-      <CustomIndexFlyout
-        isFlyoutVisible={isFlyoutVisible}
-        setIsFlyoutVisible={setIsFlyoutVisible}
-      />
     </>
   );
 }

@@ -17,7 +17,6 @@ import {
   handleJaegerDashboardRequest,
   handleJaegerErrorDashboardRequest,
 } from '../../requests/dashboard_request_handler';
-import { getValidFilterFields } from '../common/filters/filter_helpers';
 import { FilterType } from '../common/filters/filters';
 import {
   MissingConfigurationMessage,
@@ -53,7 +52,6 @@ export function DashboardContent(props: DashboardProps) {
     jaegerIndicesExist,
     toasts,
     dataSourceMDSId,
-    attributesFilterFields,
   } = props;
   const [tableItems, setTableItems] = useState([]);
   const [jaegerTableItems, setJaegerTableItems] = useState([]);
@@ -62,10 +60,12 @@ export function DashboardContent(props: DashboardProps) {
   const [errorRatePltItems, setErrorRatePltItems] = useState({ items: [], fixedInterval: '1h' });
   const [percentileMap, setPercentileMap] = useState<{ [traceGroup: string]: number[] }>({});
   const [redirect, setRedirect] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [isTraceGroupTableLoading, setIsTraceGroupTableLoading] = useState(false);
   const [showTimeoutToast, setShowTimeoutToast] = useState(false);
   const { setToast } = useToast();
   const isNavGroupEnabled = coreRefs?.chrome?.navGroup.getNavGroupEnabled();
+  const [isErrorRateTrendLoading, setIsErrorRateTrendLoading] = useState(false);
+  const [isThroughputTrendLoading, setIsThroughputTrendLoading] = useState(false);
 
   useEffect(() => {
     if (showTimeoutToast === true && (!toasts || toasts.length === 0)) {
@@ -85,13 +85,6 @@ export function DashboardContent(props: DashboardProps) {
       chrome.setBreadcrumbs([parentBreadcrumb, ...childBreadcrumbs]);
     }
 
-    const validFilters = getValidFilterFields(mode, page, attributesFilterFields);
-    setFilters([
-      ...filters.map((filter) => ({
-        ...filter,
-        locked: validFilters.indexOf(filter.field) === -1,
-      })),
-    ]);
     setRedirect(false);
   }, []);
 
@@ -115,7 +108,6 @@ export function DashboardContent(props: DashboardProps) {
   ]);
 
   const refresh = async () => {
-    setLoading(true);
     const DSL = filtersToDsl(
       mode,
       filters,
@@ -148,42 +140,35 @@ export function DashboardContent(props: DashboardProps) {
       appConfigs
     );
     const fixedInterval = minFixedInterval(startTime, endTime);
+    setIsTraceGroupTableLoading(true);
     if (mode === 'jaeger') {
-      handleJaegerDashboardRequest(
-        http,
-        DSL,
-        timeFilterDSL,
-        latencyTrendDSL,
-        tableItems,
-        setJaegerTableItems,
-        mode,
-        () => setShowTimeoutToast(true),
-        // () => {
-        //   if (toasts.length === 0) {
-        //     setToast!('Query took too long to execute.', 'danger', 'Reduce time range or filter your data. If issue persists, consider increasing your cluster size.');
-        //   }
-        // },
-        dataSourceMDSId[0].id,
-        setPercentileMap
-      ).finally(() => setLoading(false));
-      handleJaegerErrorDashboardRequest(
-        http,
-        DSL,
-        timeFilterDSL,
-        latencyTrendDSL,
-        tableItems,
-        setJaegerErrorTableItems,
-        mode,
-        () => setShowTimeoutToast(true),
-        // () => {
-        //   if (toasts.length === 0) {
-        //     setToast!('Query took too long to execute.', 'danger', 'Reduce time range or filter your data. If issue persists, consider increasing your cluster size.');
-        //   }
-        // },
-        dataSourceMDSId[0].id,
-        setPercentileMap
-      ).finally(() => setLoading(false));
-    } else if (mode === 'data_prepper' || mode === 'custom_data_prepper') {
+      Promise.all([
+        handleJaegerDashboardRequest(
+          http,
+          DSL,
+          timeFilterDSL,
+          latencyTrendDSL,
+          tableItems,
+          setJaegerTableItems,
+          mode,
+          () => setShowTimeoutToast(true),
+          dataSourceMDSId[0].id,
+          setPercentileMap
+        ),
+        handleJaegerErrorDashboardRequest(
+          http,
+          DSL,
+          timeFilterDSL,
+          latencyTrendDSL,
+          tableItems,
+          setJaegerErrorTableItems,
+          mode,
+          () => setShowTimeoutToast(true),
+          dataSourceMDSId[0].id,
+          setPercentileMap
+        ),
+      ]).finally(() => setIsTraceGroupTableLoading(false));
+    } else {
       handleDashboardRequest(
         http,
         DSL,
@@ -195,7 +180,7 @@ export function DashboardContent(props: DashboardProps) {
         () => setShowTimeoutToast(true),
         dataSourceMDSId[0].id,
         setPercentileMap
-      ).then(() => setLoading(false));
+      ).finally(() => setIsTraceGroupTableLoading(false));
       // service map should not be filtered by service name (https://github.com/opensearch-project/observability/issues/442)
       const serviceMapDSL = cloneDeep(DSL);
       serviceMapDSL.query.bool.must = serviceMapDSL.query.bool.must.filter(
@@ -203,6 +188,7 @@ export function DashboardContent(props: DashboardProps) {
       );
     }
 
+    setIsThroughputTrendLoading(true);
     handleDashboardThroughputPltRequest(
       http,
       DSL,
@@ -211,8 +197,9 @@ export function DashboardContent(props: DashboardProps) {
       setThroughputPltItems,
       mode,
       dataSourceMDSId[0].id
-    );
+    ).finally(() => setIsThroughputTrendLoading(false));
 
+    setIsErrorRateTrendLoading(true);
     handleDashboardErrorRatePltRequest(
       http,
       DSL,
@@ -221,7 +208,7 @@ export function DashboardContent(props: DashboardProps) {
       setErrorRatePltItems,
       mode,
       dataSourceMDSId[0].id
-    );
+    ).finally(() => setIsErrorRateTrendLoading(false));
   };
 
   const addFilter = (filter: FilterType) => {
@@ -296,7 +283,7 @@ export function DashboardContent(props: DashboardProps) {
                 addFilter={addFilter}
                 addPercentileFilter={addPercentileFilter}
                 setRedirect={setRedirect}
-                loading={loading}
+                loading={isTraceGroupTableLoading}
                 page={page}
               />
               <EuiSpacer />
@@ -308,6 +295,7 @@ export function DashboardContent(props: DashboardProps) {
                         items={errorRatePltItems}
                         setStartTime={setStartTime}
                         setEndTime={setEndTime}
+                        isErrorRateTrendLoading={isErrorRateTrendLoading}
                       />
                     </EuiFlexItem>
                     <EuiFlexItem>
@@ -315,6 +303,7 @@ export function DashboardContent(props: DashboardProps) {
                         items={throughputPltItems}
                         setStartTime={setStartTime}
                         setEndTime={setEndTime}
+                        isThroughputTrendLoading={isThroughputTrendLoading}
                       />
                     </EuiFlexItem>
                   </EuiFlexGroup>
@@ -328,7 +317,9 @@ export function DashboardContent(props: DashboardProps) {
               addFilters={addFilters}
               addPercentileFilter={addPercentileFilter}
               setRedirect={setRedirect}
-              loading={loading}
+              loading={isTraceGroupTableLoading}
+              isErrorRateTrendLoading={isErrorRateTrendLoading}
+              isThroughputTrendLoading={isThroughputTrendLoading}
               page={page}
               throughPutItems={throughputPltItems}
               jaegerErrorRatePltItems={errorRatePltItems}

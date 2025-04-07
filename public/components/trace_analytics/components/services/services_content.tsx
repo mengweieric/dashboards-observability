@@ -10,7 +10,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ServiceTrends } from '../../../../../common/types/trace_analytics';
 import { coreRefs } from '../../../../framework/core_refs';
 import {
-  handleServiceMapRequest,
   handleServicesRequest,
   handleServiceTrendsRequest,
 } from '../../requests/services_request_handler';
@@ -54,12 +53,13 @@ export function ServicesContent(props: ServicesProps) {
     'latency' | 'error_rate' | 'throughput'
   >('latency');
   const [redirect, setRedirect] = useState(true);
-  const [loading, setLoading] = useState(false);
   const [filteredService, setFilteredService] = useState('');
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [isServiceTrendEnabled, setIsServiceTrendEnabled] = useState(false);
   const [serviceTrends, setServiceTrends] = useState<ServiceTrends>({});
   const searchBarRef = useRef<{ updateQuery: (newQuery: string) => void }>(null);
+  const [isServicesTableDataLoading, setIsServicesTableDataLoading] = useState(false);
+  const [isServicesDataLoading, setIsServicesDataLoading] = useState(false);
 
   useEffect(() => {
     const isNavGroupEnabled = coreRefs?.chrome?.navGroup.getNavGroupEnabled();
@@ -100,11 +100,13 @@ export function ServicesContent(props: ServicesProps) {
     jaegerIndicesExist,
     dataPrepperIndicesExist,
     isServiceTrendEnabled,
+    startTime,
+    endTime,
+    props.dataSourceMDSId,
   ]);
 
-  const refresh = async (currService?: string, overrideQuery?: string) => {
+  const refresh = (currService?: string, overrideQuery?: string) => {
     const filterQuery = overrideQuery ?? query;
-    setLoading(true);
     const DSL = filtersToDsl(
       mode,
       filters,
@@ -120,29 +122,29 @@ export function ServicesContent(props: ServicesProps) {
       (must: any) => must?.term?.serviceName == null
     );
 
+    setIsServicesTableDataLoading(true);
+    handleServicesRequest(
+      http,
+      DSL,
+      setTableItems,
+      mode,
+      setServiceMap,
+      dataSourceMDSId[0].id
+    ).finally(() => setIsServicesTableDataLoading(false));
+
+    setIsServicesDataLoading(true);
     if (isServiceTrendEnabled) {
-      await handleServiceTrendsRequest(
+      handleServiceTrendsRequest(
         http,
         '1h',
         setServiceTrends,
         mode,
         [],
         dataSourceMDSId[0].id
-      );
+      ).finally(() => setIsServicesDataLoading(false));
+    } else {
+      setIsServicesDataLoading(false);
     }
-    await Promise.all([
-      handleServicesRequest(http, DSL, setTableItems, mode, dataSourceMDSId[0].id),
-      handleServiceMapRequest(
-        http,
-        serviceMapDSL,
-        mode,
-        dataSourceMDSId[0].id,
-        setServiceMap,
-        currService || filteredService
-      ),
-    ]);
-
-    setLoading(false);
   };
 
   const addFilter = (filter: FilterType) => {
@@ -222,7 +224,7 @@ export function ServicesContent(props: ServicesProps) {
             addFilter={addFilter}
             setRedirect={setRedirect}
             mode={mode}
-            loading={loading}
+            loading={isServicesTableDataLoading}
             traceColumnAction={traceColumnAction}
             setCurrentSelectedService={setCurrentSelectedService}
             jaegerIndicesExist={jaegerIndicesExist}
@@ -230,18 +232,26 @@ export function ServicesContent(props: ServicesProps) {
             isServiceTrendEnabled={isServiceTrendEnabled}
             setIsServiceTrendEnabled={setIsServiceTrendEnabled}
             serviceTrends={serviceTrends}
+            dataSourceMDSId={props.dataSourceMDSId}
+            page={page}
+            startTime={startTime}
+            endTime={endTime}
           />
           <EuiSpacer size="s" />
           {mode === 'custom_data_prepper' ||
           (mode === 'data_prepper' && dataPrepperIndicesExist) ? (
             <ServiceMap
               addFilter={addFilter}
+              filters={filters}
+              setFilters={setFilters}
               serviceMap={serviceMap}
+              isServicesDataLoading={isServicesDataLoading}
               idSelected={serviceMapIdSelected}
               setIdSelected={setServiceMapIdSelected}
               currService={filteredService}
               page={page}
               setCurrentSelectedService={setCurrentSelectedService}
+              mode={mode}
             />
           ) : (
             <div />

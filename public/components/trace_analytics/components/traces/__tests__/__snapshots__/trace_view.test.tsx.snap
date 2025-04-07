@@ -5,8 +5,7 @@ exports[`Trace view component renders trace view 1`] = `
   <EuiPage>
     <EuiPageBody>
       <EuiFlexGroup
-        alignItems="center"
-        gutterSize="s"
+        justifyContent="spaceBetween"
       >
         <EuiFlexItem>
           <EuiText
@@ -19,115 +18,143 @@ exports[`Trace view component renders trace view 1`] = `
             </h1>
           </EuiText>
         </EuiFlexItem>
+        <EuiFlexItem
+          grow={false}
+          onClick={[Function]}
+        >
+          <EuiToolTip
+            content="View associated logs using Trace Id"
+            delay="regular"
+            position="top"
+          >
+            <EuiLink
+              data-test-subj="trace-view-logs-redirection-btn"
+            >
+              <EuiSmallButton
+                iconType="discoverApp"
+                isLoading={false}
+              >
+                View associated logs
+              </EuiSmallButton>
+            </EuiLink>
+          </EuiToolTip>
+        </EuiFlexItem>
       </EuiFlexGroup>
-      <EuiSpacer
-        size="s"
-      />
-      <EuiPanel>
-        <PanelTitle
-          title="Overview"
-        />
-        <EuiHorizontalRule
-          margin="m"
-        />
-        <EuiFlexGroup>
-          <EuiFlexItem>
-            <EuiFlexGroup
-              direction="column"
-            >
-              <EuiFlexItem
-                grow={false}
-              >
-                <EuiText
-                  className="overview-title"
+      <EuiFlexGroup
+        alignItems="stretch"
+        gutterSize="s"
+      >
+        <EuiFlexItem
+          grow={5}
+        >
+          <EuiPanel>
+            <PanelTitle
+              title="Overview"
+            />
+            <EuiHorizontalRule
+              margin="m"
+            />
+            <EuiFlexGroup>
+              <EuiFlexItem>
+                <EuiFlexGroup
+                  direction="column"
                 >
-                  Trace ID
-                </EuiText>
+                  <EuiFlexItem
+                    grow={false}
+                  >
+                    <EuiText
+                      className="overview-title"
+                    >
+                      Trace ID
+                    </EuiText>
+                  </EuiFlexItem>
+                  <EuiFlexItem
+                    grow={false}
+                  >
+                    <EuiText
+                      className="overview-title"
+                    >
+                      Trace group name
+                    </EuiText>
+                    <EuiText
+                      className="overview-content"
+                      size="s"
+                    >
+                      -
+                    </EuiText>
+                  </EuiFlexItem>
+                </EuiFlexGroup>
               </EuiFlexItem>
-              <EuiFlexItem
-                grow={false}
-              >
-                <EuiText
-                  className="overview-title"
+              <EuiFlexItem>
+                <EuiFlexGroup
+                  direction="column"
                 >
-                  Trace group name
-                </EuiText>
-                <EuiText
-                  className="overview-content"
-                  size="s"
+                  <EuiFlexItem
+                    grow={false}
+                  >
+                    <EuiText
+                      className="overview-title"
+                    >
+                      Latency
+                    </EuiText>
+                    <EuiText
+                      className="overview-content"
+                      size="s"
+                    />
+                  </EuiFlexItem>
+                  <EuiFlexItem
+                    grow={false}
+                  >
+                    <EuiText
+                      className="overview-title"
+                    >
+                      Last updated
+                    </EuiText>
+                    <EuiText
+                      className="overview-content"
+                      size="s"
+                    />
+                  </EuiFlexItem>
+                </EuiFlexGroup>
+              </EuiFlexItem>
+              <EuiFlexItem>
+                <EuiFlexGroup
+                  direction="column"
                 >
-                  -
-                </EuiText>
+                  <EuiFlexItem
+                    grow={false}
+                  >
+                    <EuiText
+                      className="overview-title"
+                    >
+                      Errors
+                    </EuiText>
+                    <EuiText
+                      className="overview-content"
+                      size="s"
+                    >
+                      -
+                    </EuiText>
+                  </EuiFlexItem>
+                </EuiFlexGroup>
               </EuiFlexItem>
             </EuiFlexGroup>
-          </EuiFlexItem>
-          <EuiFlexItem>
-            <EuiFlexGroup
-              direction="column"
-            >
-              <EuiFlexItem
-                grow={false}
-              >
-                <EuiText
-                  className="overview-title"
-                >
-                  Latency
-                </EuiText>
-                <EuiText
-                  className="overview-content"
-                  size="s"
-                />
-              </EuiFlexItem>
-              <EuiFlexItem
-                grow={false}
-              >
-                <EuiText
-                  className="overview-title"
-                >
-                  Last updated
-                </EuiText>
-                <EuiText
-                  className="overview-content"
-                  size="s"
-                />
-              </EuiFlexItem>
-            </EuiFlexGroup>
-          </EuiFlexItem>
-          <EuiFlexItem>
-            <EuiFlexGroup
-              direction="column"
-            >
-              <EuiFlexItem
-                grow={false}
-              >
-                <EuiText
-                  className="overview-title"
-                >
-                  Errors
-                </EuiText>
-                <EuiText
-                  className="overview-content"
-                  size="s"
-                >
-                  -
-                </EuiText>
-              </EuiFlexItem>
-            </EuiFlexGroup>
-          </EuiFlexItem>
-        </EuiFlexGroup>
-      </EuiPanel>
-      <EuiSpacer />
-      <EuiFlexGroup>
+          </EuiPanel>
+        </EuiFlexItem>
         <EuiFlexItem
           grow={3}
         >
           <ServiceBreakdownPanel
             data={Array []}
+            isLoading={false}
           />
         </EuiFlexItem>
-        <EuiFlexItem
-          grow={7}
-        >
+      </EuiFlexGroup>
+      <EuiSpacer
+        size="m"
+      />
+      <EuiFlexGroup>
+        <EuiFlexItem>
           <SpanDetailPanel
             colorMap={Object {}}
             data={
@@ -138,9 +165,15 @@ exports[`Trace view component renders trace view 1`] = `
               }
             }
             dataSourceMDSId=""
+            dataSourceMDSLabel=""
             http={[MockFunction]}
+            isGanttChartLoading={false}
             mode="data_prepper"
-            setData={[Function]}
+            payloadData=""
+            setGanttChartLoading={[Function]}
+            setGanttData={[Function]}
+            setSpanFiltersWithStorage={[Function]}
+            spanFilters={Array []}
             traceId="test"
           />
         </EuiFlexItem>
@@ -161,6 +194,7 @@ exports[`Trace view component renders trace view 1`] = `
       <EuiSpacer />
       <ServiceMap
         idSelected="latency"
+        isServicesDataLoading={false}
         page="traceView"
         serviceMap={Object {}}
         setIdSelected={[Function]}

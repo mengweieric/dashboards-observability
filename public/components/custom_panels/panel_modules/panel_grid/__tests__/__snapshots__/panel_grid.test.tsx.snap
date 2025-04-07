@@ -177,6 +177,9 @@ exports[`Panel Grid Component renders panel grid component with empty visualizat
         ],
       },
       "getIsVisible$": [MockFunction],
+      "globalSearch": Object {
+        "getAllSearchCommands": [MockFunction],
+      },
       "logos": Object {
         "AnimatedMark": Object {
           "dark": Object {
@@ -244,10 +247,12 @@ exports[`Panel Grid Component renders panel grid component with empty visualizat
         "getCenter$": [MockFunction],
         "getLeft$": [MockFunction],
         "getLeftBottom$": [MockFunction],
+        "getPrimaryHeaderRight$": [MockFunction],
         "getRight$": [MockFunction],
         "registerCenter": [MockFunction],
         "registerLeft": [MockFunction],
         "registerLeftBottom": [MockFunction],
+        "registerPrimaryHeaderRight": [MockFunction],
         "registerRight": [MockFunction],
       },
       "navGroup": Object {

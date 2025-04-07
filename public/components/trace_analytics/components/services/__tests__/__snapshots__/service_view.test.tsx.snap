@@ -81,6 +81,53 @@ exports[`Service view component renders service view 1`] = `
             timeFormat="HH:mm"
           />
         </EuiFlexItem>
+        <EuiFlexItem
+          grow={false}
+        >
+          <EuiFlexGroup
+            gutterSize="s"
+            justifyContent="center"
+          >
+            <EuiFlexItem
+              grow={false}
+              onClick={[Function]}
+            >
+              <EuiToolTip
+                content="View service traces"
+                delay="regular"
+                position="top"
+              >
+                <EuiLink
+                  data-test-subj="service-view-traces-redirection-btn"
+                >
+                  <EuiSmallButtonIcon
+                    display="base"
+                    iconType="apmTrace"
+                  />
+                </EuiLink>
+              </EuiToolTip>
+            </EuiFlexItem>
+            <EuiFlexItem
+              grow={false}
+              onClick={[Function]}
+            >
+              <EuiToolTip
+                content="View service logs"
+                delay="regular"
+                position="top"
+              >
+                <EuiLink
+                  data-test-subj="service-view-logs-redirection-btn"
+                >
+                  <EuiSmallButtonIcon
+                    display="base"
+                    iconType="discoverApp"
+                  />
+                </EuiLink>
+              </EuiToolTip>
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        </EuiFlexItem>
       </EuiFlexGroup>
       <EuiSpacer
         size="m"
@@ -232,7 +279,10 @@ exports[`Service view component renders service view 1`] = `
       <ServiceMap
         currService="order"
         filterByCurrService={true}
+        hideSearchBar={true}
         idSelected="latency"
+        isServicesDataLoading={false}
+        mode="data_prepper"
         page="serviceView"
         serviceMap={Object {}}
         setIdSelected={[Function]}
@@ -246,21 +296,7 @@ exports[`Service view component renders service view 1`] = `
         <EuiHorizontalRule
           margin="m"
         />
-        <div>
-          <SpanDetailTable
-            DSL={Object {}}
-            dataSourceMDSId=""
-            hiddenColumns={
-              Array [
-                "serviceName",
-              ]
-            }
-            http={[MockFunction]}
-            mode="data_prepper"
-            openFlyout={[Function]}
-            setTotal={[Function]}
-          />
-        </div>
+        <div />
       </EuiPanel>
     </EuiPageBody>
   </EuiPage>

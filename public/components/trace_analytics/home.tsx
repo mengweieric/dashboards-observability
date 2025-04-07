@@ -17,14 +17,21 @@ import {
 } from '../../../../../src/core/public';
 import {
   DataSourceManagementPluginSetup,
+  DataSourceOption,
   DataSourceSelectableConfig,
   DataSourceViewConfig,
 } from '../../../../../src/plugins/data_source_management/public';
+import { DataSourceAttributes } from '../../../../../src/plugins/data_source_management/public/types';
+import { observabilityTracesNewNavID } from '../../../common/constants/shared';
 import { TRACE_TABLE_TYPE_KEY } from '../../../common/constants/trace_analytics';
 import { TraceAnalyticsMode, TraceQueryMode } from '../../../common/types/trace_analytics';
 import { coreRefs } from '../../framework/core_refs';
 import { FilterType } from './components/common/filters/filters';
-import { getAttributes, getSpanIndices } from './components/common/helper_functions';
+import {
+  TraceSettings,
+  getAttributeFieldNames,
+  getSpanIndices,
+} from './components/common/helper_functions';
 import { SearchBarProps } from './components/common/search_bar';
 import { ServiceView, Services } from './components/services';
 import { ServiceFlyout } from './components/services/service_flyout';
@@ -35,6 +42,8 @@ import {
   handleJaegerIndicesExistRequest,
 } from './requests/request_handler';
 import { TraceSideBar } from './trace_side_nav';
+
+const newNavigation = coreRefs.chrome?.navGroup.getNavGroupEnabled();
 
 export interface TraceAnalyticsCoreDeps {
   parentBreadcrumb: ChromeBreadcrumb;
@@ -82,7 +91,7 @@ export const Home = (props: HomeProps) => {
   const [jaegerIndicesExist, setJaegerIndicesExist] = useState(false);
   const [attributesFilterFields, setAttributesFilterFields] = useState<string[]>([]);
   const [mode, setMode] = useState<TraceAnalyticsMode>(
-    (sessionStorage.getItem('TraceAnalyticsMode') as TraceAnalyticsMode) || 'jaeger'
+    (sessionStorage.getItem('TraceAnalyticsMode') as TraceAnalyticsMode) || 'data_prepper'
   );
   const storedFilters = sessionStorage.getItem('TraceAnalyticsFilters');
   const [query, setQuery] = useState<string>(sessionStorage.getItem('TraceAnalyticsQuery') || '');
@@ -122,7 +131,7 @@ export const Home = (props: HomeProps) => {
   const queryParamsOnLoad = new URLSearchParams(window.location.href.split('?')[1]);
   const dsFromURL = queryParamsOnLoad.get('datasourceId');
 
-  const [dataSourceMDSId, setDataSourceMDSId] = useState([
+  const [dataSourceMDSId, setDataSourceMDSId] = useState<DataSourceOption>([
     { id: dsFromURL ?? undefined, label: undefined },
   ]);
   const [currentSelectedService, setCurrentSelectedService] = useState('');
@@ -194,6 +203,21 @@ export const Home = (props: HomeProps) => {
     props.notifications,
   ]);
 
+  // This function sets mds label given the id is set in state:dataSourceMDSId
+  const getDatasourceAttributes = async () => {
+    const dataSourceAttributes = await coreRefs?.savedObjectsClient?.get<DataSourceAttributes>(
+      'data-source',
+      dataSourceMDSId[0].id
+    );
+    setDataSourceMDSId([
+      { id: dataSourceMDSId[0].id, label: dataSourceAttributes?.attributes.title },
+    ]);
+  };
+
+  const isValidTraceAnalyticsMode = (urlMode: string | null): urlMode is TraceAnalyticsMode => {
+    return ['jaeger', 'data_prepper', 'custom_data_prepper'].includes(urlMode || '');
+  };
+
   useEffect(() => {
     handleDataPrepperIndicesExistRequest(
       props.http,
@@ -201,6 +225,10 @@ export const Home = (props: HomeProps) => {
       dataSourceMDSId[0].id
     );
     handleJaegerIndicesExistRequest(props.http, setJaegerIndicesExist, dataSourceMDSId[0].id);
+    // When datasource is loaded form the URL, the label is set to undefined
+    if (dataSourceMDSId[0].id && dataSourceMDSId[0].label === undefined) {
+      getDatasourceAttributes();
+    }
   }, [dataSourceMDSId]);
 
   const modes = [
@@ -215,27 +243,63 @@ export const Home = (props: HomeProps) => {
 
   const fetchAttributesFields = () => {
     coreRefs.dslService
-      ?.fetchFields(getSpanIndices(mode))
+      ?.fetchFieldCaps(getSpanIndices(mode), '*attributes*', dataSourceMDSId[0].id)
       .then((res) => {
-        const attributes = getAttributes(res);
+        const attributes = getAttributeFieldNames(res);
         setAttributesFilterFields(attributes);
       })
-      .catch((error) => console.error('fetching attributes field failed', error));
+      .catch((error) => console.error('Failed to fetch attribute fields', error));
   };
 
   useEffect(() => {
     if (!sessionStorage.getItem('TraceAnalyticsMode')) {
       if (dataPrepperIndicesExist) {
         setMode('data_prepper');
+        sessionStorage.setItem('TraceAnalyticsMode', 'data_prepper');
       } else if (jaegerIndicesExist) {
         setMode('jaeger');
+        sessionStorage.setItem('TraceAnalyticsMode', 'jaeger');
       }
     }
   }, [jaegerIndicesExist, dataPrepperIndicesExist]);
 
+  const updateUrlWithMode = (traceMode: string) => {
+    const urlParts = window.location.href.split('?');
+    const queryParams = new URLSearchParams(urlParts[1]?.split('#')[0] || '');
+    queryParams.set('mode', traceMode);
+    return `${urlParts[0]}?${queryParams.toString()}${
+      urlParts[1]?.includes('#') ? `#${urlParts[1].split('#')[1]}` : ''
+    }`;
+  };
+
+  useEffect(() => {
+    const urlParts = window.location.href.split('?');
+    const queryParams =
+      urlParts.length > 1 ? new URLSearchParams(urlParts[1].split('#')[0]) : new URLSearchParams();
+
+    const urlMode = queryParams.get('mode');
+    const isCustomModeEnabled = TraceSettings.getCustomModeSetting();
+
+    if (!urlMode && isCustomModeEnabled) {
+      const newUrl = updateUrlWithMode('custom_data_prepper');
+      if (window.location.href !== newUrl) {
+        window.history.replaceState(null, '', newUrl);
+
+        setMode('custom_data_prepper');
+        sessionStorage.setItem('TraceAnalyticsMode', 'custom_data_prepper');
+      }
+    } else if (isValidTraceAnalyticsMode(urlMode)) {
+      // Use the existing mode if valid
+      if (sessionStorage.getItem('TraceAnalyticsMode') !== urlMode) {
+        setMode(urlMode as TraceAnalyticsMode);
+        sessionStorage.setItem('TraceAnalyticsMode', urlMode);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (mode === 'data_prepper' || mode === 'custom_data_prepper') fetchAttributesFields();
-  }, [mode]);
+  }, [mode, dataSourceMDSId]);
 
   const serviceBreadcrumbs = [
     ...(!isNavGroupEnabled
@@ -268,7 +332,23 @@ export const Home = (props: HomeProps) => {
   ];
 
   const traceColumnAction = () => {
-    location.assign('#/traces');
+    const tracesPath = '#/traces';
+    const dataSourceId = dataSourceMDSId[0]?.id || '';
+    const urlParts = window.location.href.split('?');
+    const queryParams =
+      urlParts.length > 1 ? new URLSearchParams(urlParts[1]) : new URLSearchParams();
+
+    const modeParam = queryParams.get('mode') || '';
+    const modeQuery = modeParam ? `&mode=${encodeURIComponent(modeParam)}` : '';
+
+    if (newNavigation) {
+      coreRefs.application?.navigateToApp(observabilityTracesNewNavID, {
+        path: `${tracesPath}?datasourceId=${encodeURIComponent(dataSourceId)}${modeQuery}`,
+      });
+    } else {
+      location.assign(`${tracesPath}?datasourceId=${encodeURIComponent(dataSourceId)}${modeQuery}`);
+    }
+
     setTracesTableMode('traces');
     sessionStorage.setItem(TRACE_TABLE_TYPE_KEY, 'traces');
   };
@@ -310,6 +390,7 @@ export const Home = (props: HomeProps) => {
         addSpanFilter={addSpanFilter}
         mode={spanMode}
         dataSourceMDSId={spanDataSourceMDSId}
+        dataSourceMDSLabel={dataSourceMDSId[0].label}
       />
     );
   };
@@ -375,6 +456,8 @@ export const Home = (props: HomeProps) => {
           render={(_routerProps) => {
             const queryParams = new URLSearchParams(window.location.href.split('?')[1]);
             const traceId = queryParams.get('traceId');
+            const traceModeFromURL = queryParams.get('mode');
+            const traceMode = isValidTraceAnalyticsMode(traceModeFromURL) ? traceModeFromURL : mode;
 
             const SideBarComponent = !isNavGroupEnabled ? TraceSideBar : React.Fragment;
             if (!traceId) {
@@ -390,6 +473,7 @@ export const Home = (props: HomeProps) => {
                     tracesTableMode={tracesTableMode}
                     setTracesTableMode={setTracesTableMode}
                     {...commonProps}
+                    mode={((traceMode as unknown) as TraceAnalyticsMode) || mode}
                   />
                 </SideBarComponent>
               );
@@ -400,7 +484,7 @@ export const Home = (props: HomeProps) => {
                   chrome={props.chrome}
                   http={props.http}
                   traceId={decodeURIComponent(traceId)}
-                  mode={mode}
+                  mode={((traceMode as unknown) as TraceAnalyticsMode) || mode}
                   dataSourceMDSId={dataSourceMDSId}
                   dataSourceManagement={props.dataSourceManagement}
                   setActionMenu={props.setActionMenu}
@@ -418,6 +502,10 @@ export const Home = (props: HomeProps) => {
           render={(_routerProps) => {
             const queryParams = new URLSearchParams(window.location.href.split('?')[1]);
             const serviceId = queryParams.get('serviceId');
+            const serviceModeFromURL = queryParams.get('mode');
+            const serviceMode = isValidTraceAnalyticsMode(serviceModeFromURL)
+              ? serviceModeFromURL
+              : mode;
 
             const SideBarComponent = !isNavGroupEnabled ? TraceSideBar : React.Fragment;
             if (!serviceId) {
@@ -431,6 +519,7 @@ export const Home = (props: HomeProps) => {
                     toasts={toasts}
                     dataSourceMDSId={dataSourceMDSId}
                     {...commonProps}
+                    mode={((serviceMode as unknown) as TraceAnalyticsMode) || mode}
                   />
                 </SideBarComponent>
               );
@@ -439,6 +528,7 @@ export const Home = (props: HomeProps) => {
                 <ServiceView
                   serviceName={decodeURIComponent(serviceId)}
                   {...commonProps}
+                  mode={((serviceMode as unknown) as TraceAnalyticsMode) || mode}
                   addFilter={(filter: FilterType) => {
                     for (const addedFilter of filters) {
                       if (
@@ -459,9 +549,9 @@ export const Home = (props: HomeProps) => {
           }}
         />
         <Route path="/" render={() => <Redirect to={defaultRoute} />} />
+        {flyout}
+        {spanFlyoutComponent}
       </HashRouter>
-      {flyout}
-      {spanFlyoutComponent}
     </>
   );
 };

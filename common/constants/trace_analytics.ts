@@ -12,7 +12,7 @@ export const TRACE_ANALYTICS_PLOTS_DATE_FORMAT = 'MMM D, YYYY HH:mm:ss.SSS';
 export const SERVICE_MAP_MAX_NODES = 500;
 // size limit when requesting edge related queries, not necessarily the number of edges
 export const SERVICE_MAP_MAX_EDGES = 1000;
-export const TRACES_MAX_NUM = 3000;
+export const TRACES_MAX_NUM = 500;
 export const TRACE_ANALYTICS_DOCUMENTATION_LINK =
   'https://opensearch.org/docs/latest/observability-plugin/trace/index/';
 
@@ -24,6 +24,20 @@ export const TRACE_ANALYTICS_DSL_ROUTE = '/api/observability/trace_analytics/que
 
 export const TRACE_CUSTOM_SPAN_INDEX_SETTING = 'observability:traceAnalyticsSpanIndices';
 export const TRACE_CUSTOM_SERVICE_INDEX_SETTING = 'observability:traceAnalyticsServiceIndices';
+export const TRACE_CUSTOM_MODE_DEFAULT_SETTING = 'observability:traceAnalyticsCustomModeDefault';
+export const TRACE_CORRELATED_LOGS_INDEX_SETTING =
+  'observability:traceAnalyticsCorrelatedLogsIndices';
+export const TRACE_LOGS_FIELD_MAPPNIGS_SETTING =
+  'observability:traceAnalyticsCorrelatedLogsFieldMappings';
+
+export const DEFAULT_SS4O_LOGS_INDEX = 'ss4o_logs-*';
+export const DEFAULT_CORRELATED_LOGS_FIELD_MAPPINGS = `
+{
+  "serviceName": "serviceName",
+  "spanId": "spanId",
+  "timestamp": "time",
+  "traceId": "traceId"
+}`;
 
 export enum TRACE_TABLE_TITLES {
   all_spans = 'All Spans',

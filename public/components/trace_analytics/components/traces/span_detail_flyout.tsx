@@ -13,9 +13,12 @@ import {
   EuiFlyoutBody,
   EuiFlyoutHeader,
   EuiHorizontalRule,
+  EuiLoadingContent,
+  EuiSmallButton,
   EuiSmallButtonIcon,
   EuiSpacer,
   EuiText,
+  EuiToolTip,
 } from '@elastic/eui';
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
@@ -23,16 +26,11 @@ import round from 'lodash/round';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { HttpSetup } from '../../../../../../../src/core/public';
-import {
-  DEFAULT_DATA_SOURCE_NAME,
-  DEFAULT_DATA_SOURCE_TYPE,
-} from '../../../../../common/constants/data_sources';
-import { observabilityLogsID } from '../../../../../common/constants/shared';
 import { TRACE_ANALYTICS_DATE_FORMAT } from '../../../../../common/constants/trace_analytics';
 import { SpanField, TraceAnalyticsMode } from '../../../../../common/types/trace_analytics';
-import { coreRefs } from '../../../../framework/core_refs';
 import { handleSpansFlyoutRequest } from '../../requests/traces_request_handler';
 import { microToMilliSec, nanoToMilliSec } from '../common/helper_functions';
+import { redirectSpansToLogs } from '../common/redirection_helpers';
 import { FlyoutListItem } from './flyout_list_item';
 
 const MODE_TO_FIELDS: Record<TraceAnalyticsMode, Record<SpanField, string | undefined>> = {
@@ -84,6 +82,7 @@ export function SpanDetailFlyout(props: {
   addSpanFilter: (field: string, value: any) => void;
   mode: TraceAnalyticsMode;
   dataSourceMDSId: string;
+  dataSourceMDSLabel: string | undefined;
   serviceName?: string;
   setCurrentSelectedService?: React.Dispatch<React.SetStateAction<string>> | undefined;
   startTime?: string;
@@ -92,9 +91,17 @@ export function SpanDetailFlyout(props: {
 }) {
   const { mode } = props;
   const [span, setSpan] = useState<any>({});
+  const [isSpanDataLoading, setIsSpanDataLoading] = useState(false);
 
   useEffect(() => {
-    handleSpansFlyoutRequest(props.http, props.spanId, setSpan, mode, props.dataSourceMDSId);
+    setIsSpanDataLoading(true);
+    handleSpansFlyoutRequest(
+      props.http,
+      props.spanId,
+      setSpan,
+      mode,
+      props.dataSourceMDSId
+    ).finally(() => setIsSpanDataLoading(false));
   }, [props.spanId]);
 
   const getListItem = (
@@ -123,6 +130,13 @@ export function SpanDetailFlyout(props: {
   };
 
   const renderContent = () => {
+    if (isSpanDataLoading) {
+      return (
+        <div>
+          <EuiLoadingContent lines={5} />
+        </div>
+      );
+    }
     if (!span || isEmpty(span)) return '-';
     const overviewList = [
       getListItem(
@@ -287,36 +301,23 @@ export function SpanDetailFlyout(props: {
         <EuiText size="m">
           <span className="panel-title">Overview</span>
         </EuiText>
-        <EuiSpacer size="s" />
-        {overviewList}
-        <EuiSpacer size="xs" />
-        <EuiHorizontalRule margin="s" />
-        {eventsComponent}
-        <EuiText size="m">
-          <span className="panel-title">Span attributes</span>
-          {attributesList.length === 0 || attributesList.length ? (
-            <span className="panel-title-count">{` (${attributesList.length})`}</span>
-          ) : null}
-        </EuiText>
-        <EuiSpacer size="s" />
-        {attributesList}
+        <>
+          <EuiSpacer size="s" />
+          {overviewList}
+          <EuiSpacer size="xs" />
+          <EuiHorizontalRule margin="s" />
+          {eventsComponent}
+          <EuiText size="m">
+            <span className="panel-title">Span attributes</span>
+            {attributesList.length === 0 || attributesList.length ? (
+              <span className="panel-title-count">{` (${attributesList.length})`}</span>
+            ) : null}
+          </EuiText>
+          <EuiSpacer size="s" />
+          {attributesList}
+        </>
       </>
     );
-  };
-
-  const redirectToExplorer = () => {
-    const spanId = getSpanValue(span, mode, 'SPAN_ID');
-    const spanField = getSpanFieldKey(mode, 'SPAN_ID');
-    coreRefs?.application!.navigateToApp(observabilityLogsID, {
-      path: `#/explorer`,
-      state: {
-        DEFAULT_DATA_SOURCE_NAME,
-        DEFAULT_DATA_SOURCE_TYPE,
-        queryToRun: `source = ss4o_logs-* | where ${spanField}='${spanId}'`,
-        startTimeRange: props.startTime,
-        endTimeRange: props.endTime,
-      },
-    });
   };
 
   return (
@@ -337,10 +338,27 @@ export function SpanDetailFlyout(props: {
               </EuiText>
             </EuiFlexItem>
             {(mode === 'data_prepper' || mode === 'custom_data_prepper') && (
-              <EuiFlexItem>
-                <EuiButtonEmpty size="xs" onClick={redirectToExplorer}>
-                  View associated logs
-                </EuiButtonEmpty>
+              <EuiFlexItem grow={false}>
+                {!isSpanDataLoading && !isEmpty(span) && (
+                  <EuiToolTip content="View associated logs using Span Id">
+                    <EuiSmallButton
+                      onClick={() => {
+                        const spanId = getSpanValue(span, mode, 'SPAN_ID');
+                        redirectSpansToLogs({
+                          fromTime: span.startTime,
+                          toTime: span.endTime,
+                          spanId,
+                          dataSourceMDSId: [
+                            { id: props.dataSourceMDSId, label: props.dataSourceMDSLabel! },
+                          ],
+                        });
+                      }}
+                      iconType="discoverApp"
+                    >
+                      View associated logs
+                    </EuiSmallButton>
+                  </EuiToolTip>
+                )}
               </EuiFlexItem>
             )}
             {props.serviceName && (

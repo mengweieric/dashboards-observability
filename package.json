@@ -1,6 +1,6 @@
 {
   "name": "observability-dashboards",
-  "version": "3.0.0.0",
+  "version": "3.0.0.0-beta1",
   "main": "index.ts",
   "license": "Apache-2.0",
   "scripts": {
@@ -47,7 +47,7 @@
     "@types/react-test-renderer": "^18.0.0",
     "@types/sanitize-filename": "^1.6.3",
     "antlr4ts-cli": "^0.5.0-alpha.4",
-    "cypress": "^13.6.0",
+    "cypress": "12.17.4",
     "cypress-multi-reporters": "^1.6.4",
     "cypress-parallel": "^0.14.0",
     "cypress-watch-and-reload": "^1.10.6",
@@ -59,7 +59,7 @@
   "resolutions": {
     "@types/react": "^16.14.23",
     "react-syntax-highlighter": "^15.4.3",
-    "prismjs": "^1.22.0",
+    "prismjs": "^1.30.0",
     "trim": "^1.0.0",
     "lodash": "^4.17.21",
     "glob-parent": "^6.0.1",
@@ -73,7 +73,11 @@
     "semver": "^7.5.2",
     "@cypress/request": "^3.0.0",
     "braces": "^3.0.3",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "**/eslint/cross-spawn": "^7.0.5",
+    "nanoid": "3.3.8",
+    "serialize-javascript": "^6.0.2",
+    "@babel/runtime": "^7.26.10"
   },
   "eslintIgnore": [
     "common/query_manager/antlr/output/*",

@@ -21,6 +21,8 @@ import {
   EuiButton,
   EuiIcon,
   EuiCard,
+  EuiFormRow,
+  EuiSelectableOption,
 } from '@elastic/eui';
 import React, { useEffect, useState } from 'react';
 
@@ -52,7 +54,7 @@ interface CollectAndShipDataProps {
   selectedDataSourceLabel: string;
 }
 
-interface CollectorOption {
+export interface CollectorOption {
   label: string;
   value: string;
 }
@@ -69,6 +71,21 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [collectorOptions, setCollectorOptions] = useState<CollectorOption[]>([]);
   const [patternsContent, setPatternsContent] = useState<any[]>([]);
+
+  const getTelemetryOption = (collectionMethodOtel: string) => {
+    switch (collectionMethodOtel) {
+      case cardTwo:
+        return { label: 'Open Telemetry', value: 'otelMetrics' };
+      case cardThree:
+        return { label: 'Open Telemetry', value: 'otelTraces' };
+      default:
+        return { label: 'Open Telemetry', value: 'otelLogs' };
+    }
+  };
+
+  const [selectedIntegration, setSelectedIntegration] = useState<
+    Array<EuiSelectableOption<CollectorOption>>
+  >([getTelemetryOption(cardOne)]);
 
   const technologyJsonMap: Record<string, any> = {
     otelLogs: otelJsonLogs,
@@ -122,13 +139,14 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
     };
   }, [specificMethod]);
 
-  const handleSpecificMethodChange = (newOption: any) => {
+  const handleSpecificMethodChange = (newOption: Array<EuiSelectableOption<CollectorOption>>) => {
     const selectedOptionValue = newOption[0]?.value;
 
     if (selectedOptionValue === specificMethod) {
       return;
     }
 
+    setSelectedIntegration(newOption);
     setSpecificMethod(selectedOptionValue);
     setSelectedWorkflow('');
     setGettingStarted(null);
@@ -138,7 +156,8 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
   // Auto-select first collector if nothing is selected and a collection method is set
   useEffect(() => {
     if (collectorOptions.length > 0 && !specificMethod && collectionMethod) {
-      handleSpecificMethodChange([{ value: collectorOptions[0].value }]);
+      const telemetryOption = getTelemetryOption(collectionMethod);
+      handleSpecificMethodChange([{ ...telemetryOption }]);
     }
   }, [collectorOptions, specificMethod, collectionMethod]);
 
@@ -151,17 +170,19 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
 
     if (value === cardOne) {
       setCollectorOptions([
-        { label: 'Open Telemetry', value: 'otelLogs' },
+        getTelemetryOption(cardOne),
         { label: 'Nginx', value: 'nginx' },
         { label: 'Java', value: 'java' },
         { label: 'Python', value: 'python' },
         { label: 'Golang', value: 'golang' },
       ]);
     } else if (value === cardTwo) {
-      setCollectorOptions([{ label: 'Open Telemetry', value: 'otelMetrics' }]);
+      setCollectorOptions([getTelemetryOption(cardTwo)]);
     } else if (value === cardThree) {
-      setCollectorOptions([{ label: 'Open Telemetry', value: 'otelTraces' }]);
+      setCollectorOptions([getTelemetryOption(cardThree)]);
     }
+
+    setSelectedIntegration([getTelemetryOption(value)]);
   };
 
   const renderSpecificMethodDropdown = () => {
@@ -193,22 +214,22 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
 
     return (
       <>
-        <EuiSpacer size="s" />
-        <EuiText size="s">Select telemetry source</EuiText>
-        <div style={{ maxWidth: '400px' }}>
-          <EuiCompressedComboBox
-            singleSelection={{ asPlainText: true }}
-            options={optionsWithIcons}
-            selectedOptions={selectedOption ? [selectedOption] : []}
-            onChange={(newOptions) => handleSpecificMethodChange(newOptions)}
-            renderOption={(option) => (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                {option.prepend}
-                {option.label}
-              </div>
-            )}
-          />
-        </div>
+        <EuiFormRow label="Telemetry source">
+          <div style={{ maxWidth: '400px' }}>
+            <EuiCompressedComboBox
+              singleSelection={{ asPlainText: true }}
+              options={optionsWithIcons}
+              selectedOptions={selectedOption ? [selectedOption] : []}
+              onChange={(newOptions) => handleSpecificMethodChange(newOptions)}
+              renderOption={(option) => (
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {option.prepend}
+                  {option.label}
+                </div>
+              )}
+            />
+          </div>
+        </EuiFormRow>
       </>
     );
   };
@@ -268,28 +289,17 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
 
       return (
         <div key={idx}>
-          <EuiTitle size="s">
-            <h3>{schema.type} Schema</h3>
-          </EuiTitle>
           <EuiText>
             {schema.description}
-            <br />
-            {schema.alias && (
-              <>
-                <strong>Alias:</strong> {schema.alias}
-                <br />
-              </>
-            )}
-            {indexPatternName && (
-              <>
-                <strong>Index Pattern Name:</strong> {indexPatternName}
-                <br />
-              </>
-            )}
             {Array.isArray(schema.info) &&
               schema.info.map((link: any, linkIdx: number) =>
                 link && typeof link.url === 'string' ? (
-                  <EuiLink key={linkIdx} href={link.url} target="_blank">
+                  <EuiLink
+                    key={linkIdx}
+                    href={link.url}
+                    target="_blank"
+                    style={{ marginRight: '8px' }}
+                  >
                     {typeof link.title === 'string' && link.title.trim() !== ''
                       ? link.title
                       : 'More Info'}
@@ -302,25 +312,50 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
               )}
           </EuiText>
           {schema.content && (
-            <EuiCodeBlock language="bash" fontSize="m" paddingSize="s" isCopyable>
-              {schema.content}
-            </EuiCodeBlock>
+            <>
+              <EuiSpacer size="s" />
+              <EuiCodeBlock language="bash" fontSize="m" paddingSize="s" isCopyable>
+                {schema.content}
+              </EuiCodeBlock>
+              <EuiSpacer size="s" />
+            </>
           )}
           {schema['index-template'] && (
             <EuiLink href={schema['index-template']} target="_blank">
-              {`${indexPatternName} Index Template`}
+              {`${indexPatternName} Index template`}
             </EuiLink>
           )}
-          <EuiSpacer size="m" />
+          <EuiSpacer size="s" />
         </div>
       );
     });
 
   const renderIndex = (indexPatterns: any) => (
     <>
+      {indexPatterns?.['index-patterns-name']?.map((pattern: string, idx: number) => (
+        <EuiText key={idx} size="m">
+          {pattern}
+        </EuiText>
+      ))}
+      <EuiSpacer size="s" />
+      <EuiButton
+        onClick={async () => {
+          await UploadAssets(
+            specificMethod,
+            selectedDataSourceId,
+            selectedDataSourceLabel,
+            technologyJsonMap[specificMethod]?.['getting-started']?.schema ||
+              technologyJsonMap[specificMethod]?.schema ||
+              [],
+            selectedIntegration
+          );
+        }}
+        fill
+      >
+        Create assets
+      </EuiButton>
+      <EuiSpacer size="s" />
       <EuiText>
-        {indexPatterns?.description}
-        <br />
         {Array.isArray(indexPatterns?.info) &&
           indexPatterns.info.map((link: any, linkIdx: number) =>
             link && typeof link.url === 'string' ? (
@@ -336,25 +371,115 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
             )
           )}
       </EuiText>
-      <EuiSpacer size="m" />
-      <EuiTitle size="s">
-        <h3>Index Patterns</h3>
-      </EuiTitle>
-      <EuiListGroup>
-        {indexPatterns?.['index-patterns-name']?.map((pattern: string, idx: number) => (
-          <EuiListGroupItem key={idx} label={pattern} />
-        ))}
-      </EuiListGroup>
-      <EuiButton
-        onClick={async () => {
-          await UploadAssets(specificMethod, selectedDataSourceId, selectedDataSourceLabel);
-        }}
-        fill
-      >
-        Create assets
-      </EuiButton>
     </>
   );
+
+  const renderSchemaAndIndexPattern = (data: any) => {
+    if (!data) return null;
+
+    const schemas = Array.isArray(data.schema) ? data.schema : [data.schema || data];
+    const indexPatternsData = data['index-patterns'] || data['index-patterns-name'] || {};
+
+    return (
+      <div>
+        {schemas.map((schema: any, schemaIdx: number) => {
+          const indexPatternName = schema?.['index-pattern-name'] || '';
+          return (
+            <div key={schemaIdx}>
+              <EuiTitle size="s">
+                <h4>{schema?.type} schema</h4>
+              </EuiTitle>
+              <EuiText>
+                {Array.isArray(schema?.info) &&
+                  schema.info.map((link: any, linkIdx: number) =>
+                    link && typeof link.url === 'string' ? (
+                      <EuiLink
+                        key={linkIdx}
+                        href={link.url}
+                        target="_blank"
+                        style={{ marginRight: '8px' }}
+                      >
+                        {typeof link.title === 'string' && link.title.trim() !== ''
+                          ? link.title
+                          : 'More Info'}
+                      </EuiLink>
+                    ) : (
+                      <EuiText color="danger" key={linkIdx}>
+                        Invalid URL
+                      </EuiText>
+                    )
+                  )}
+              </EuiText>
+
+              {schema?.['index-template'] && (
+                <EuiLink
+                  href={schema['index-template']}
+                  target="_blank"
+                  style={{ marginRight: '8px' }}
+                >
+                  {`${indexPatternName} Index template`}
+                </EuiLink>
+              )}
+              <EuiSpacer size="s" />
+            </div>
+          );
+        })}
+
+        <EuiTitle size="s">
+          <h4>Index patterns</h4>
+        </EuiTitle>
+        {Array.isArray(indexPatternsData?.['index-patterns-name']) &&
+        indexPatternsData['index-patterns-name'].length > 0 ? (
+          indexPatternsData['index-patterns-name'].map((pattern: string, idx: number) => (
+            <EuiText key={idx} size="m">
+              {pattern}
+            </EuiText>
+          ))
+        ) : (
+          <EuiText>No index patterns available</EuiText>
+        )}
+        <EuiSpacer size="s" />
+        <EuiButton
+          onClick={async () => {
+            await UploadAssets(
+              specificMethod,
+              selectedDataSourceId,
+              selectedDataSourceLabel,
+              technologyJsonMap[specificMethod]?.['getting-started']?.schema ||
+                technologyJsonMap[specificMethod]?.schema ||
+                [],
+              selectedIntegration
+            );
+          }}
+          fill
+        >
+          Create assets
+        </EuiButton>
+        <EuiSpacer size="s" />
+        <EuiText>
+          {Array.isArray(indexPatternsData?.info) &&
+            indexPatternsData.info.map((link: any, linkIdx: number) =>
+              link && typeof link.url === 'string' ? (
+                <EuiLink
+                  key={linkIdx}
+                  href={link.url}
+                  target="_blank"
+                  style={{ marginRight: '8px' }}
+                >
+                  {typeof link.title === 'string' && link.title.trim() !== ''
+                    ? link.title
+                    : 'More Info'}
+                </EuiLink>
+              ) : (
+                <EuiText color="danger" key={linkIdx}>
+                  Invalid URL
+                </EuiText>
+              )
+            )}
+        </EuiText>
+      </div>
+    );
+  };
 
   const renderTechnologyDashboardCards = (specificMethodRender: string) => {
     const baseUrl = `${window.location.origin}/app`;
@@ -399,7 +524,7 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
             title="Create a new dashboard"
             description="Create a new dashboard to visualize your data"
             footer={
-              <EuiButton iconType="plusInCircle" onClick={() => redirectToDashboards('dashboards')}>
+              <EuiButton iconType="plus" onClick={() => redirectToDashboards('dashboards')}>
                 Create a dashboard
               </EuiButton>
             }
@@ -410,24 +535,41 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
   };
 
   const renderSteps = (workflow: any) => {
-    const steps = [
-      {
-        title: 'Schema',
-        children: renderSchema(
-          technologyJsonMap[specificMethod]?.['getting-started']?.schema ||
-            technologyJsonMap[specificMethod]?.schema ||
+    const hasCombinedSchemaAndIndexPattern =
+      technologyJsonMap[specificMethod]?.['getting-started']?.['schema_and_index_pattern'] ||
+      technologyJsonMap[specificMethod]?.['schema_and_index_pattern'];
+
+    const steps = [];
+
+    if (hasCombinedSchemaAndIndexPattern) {
+      steps.push({
+        title: 'Schema and index patterns',
+        children: renderSchemaAndIndexPattern(
+          technologyJsonMap[specificMethod]?.['getting-started']?.['schema_and_index_pattern'] ||
+            technologyJsonMap[specificMethod]?.['schema_and_index_pattern'] ||
             []
         ),
-      },
-      {
-        title: 'Index Patterns',
-        children: renderIndex(
-          technologyJsonMap[specificMethod]?.['getting-started']?.['index-patterns'] ||
-            technologyJsonMap[specificMethod]?.['index-patterns'] ||
-            {}
-        ),
-      },
-    ];
+      });
+    } else {
+      steps.push(
+        {
+          title: 'Schema',
+          children: renderSchema(
+            technologyJsonMap[specificMethod]?.['getting-started']?.schema ||
+              technologyJsonMap[specificMethod]?.schema ||
+              []
+          ),
+        },
+        {
+          title: 'Index patterns',
+          children: renderIndex(
+            technologyJsonMap[specificMethod]?.['getting-started']?.['index-patterns'] ||
+              technologyJsonMap[specificMethod]?.['index-patterns'] ||
+              {}
+          ),
+        }
+      );
+    }
 
     steps.push(
       ...workflow.steps.map((step: any) => ({
@@ -452,7 +594,12 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
               step.info.map((link: any, linkIndex: number) => {
                 if (link && typeof link.url === 'string') {
                   return (
-                    <EuiLink key={linkIndex} href={link.url} target="_blank">
+                    <EuiLink
+                      key={linkIndex}
+                      href={link.url}
+                      target="_blank"
+                      style={{ marginRight: '8px' }}
+                    >
                       {typeof link.title === 'string' && link.title.trim() !== ''
                         ? link.title
                         : 'More Info'}
@@ -468,9 +615,13 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
               })}
 
             {step.content && (
-              <EuiCodeBlock language="bash" fontSize="m" paddingSize="s" isCopyable>
-                {step.content}
-              </EuiCodeBlock>
+              <>
+                <EuiSpacer size="s" />
+                <EuiCodeBlock language="bash" fontSize="m" paddingSize="s" isCopyable>
+                  {step.content}
+                </EuiCodeBlock>
+                <EuiSpacer size="s" />
+              </>
             )}
             <EuiSpacer size="m" />
           </div>
@@ -504,9 +655,12 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
 
   return (
     <EuiPanel paddingSize="m">
+      <EuiTitle size="s">
+        <h3>Ingest data by signal type</h3>
+      </EuiTitle>
       <EuiSpacer size="s" />
-      <EuiFlexGroup>
-        <EuiFlexItem>
+      <EuiFlexGroup gutterSize="m">
+        <EuiFlexItem style={{ maxWidth: '300px' }}>
           <EuiCheckableCard
             id="getting_started_logs"
             label={cardOne}
@@ -517,7 +671,7 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
             }}
           />
         </EuiFlexItem>
-        <EuiFlexItem>
+        <EuiFlexItem style={{ maxWidth: '300px' }}>
           <EuiCheckableCard
             id="getting_started_metrics"
             label={cardTwo}
@@ -528,7 +682,7 @@ export const CollectAndShipData: React.FC<CollectAndShipDataProps> = ({
             }}
           />
         </EuiFlexItem>
-        <EuiFlexItem>
+        <EuiFlexItem style={{ maxWidth: '300px' }}>
           <EuiCheckableCard
             id="getting_started_traces"
             label={cardThree}

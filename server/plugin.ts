@@ -13,6 +13,7 @@ import {
   PluginInitializerContext,
   SavedObject,
   SavedObjectsType,
+  UiSettingScope,
 } from '../../../src/core/server';
 import { DataSourcePluginSetup } from '../../../src/plugins/data_source/server/types';
 import { DataSourceManagementPlugin } from '../../../src/plugins/data_source_management/public/plugin';
@@ -218,7 +219,12 @@ export class ObservabilityPlugin
     core.savedObjects.registerType(integrationTemplateType);
 
     // Register server side APIs
-    setupRoutes({ router, client: openSearchObservabilityClient, dataSourceEnabled });
+    setupRoutes({
+      router,
+      client: openSearchObservabilityClient,
+      dataSourceEnabled,
+      logger: this.logger,
+    });
 
     core.savedObjects.registerType(getVisualizationSavedObject(dataSourceEnabled));
     core.savedObjects.registerType(getSearchSavedObject(dataSourceEnabled));
@@ -238,6 +244,21 @@ export class ObservabilityPlugin
         value: '',
         description: 'The default dashboard to display in Observability overview page',
         schema: schema.string(),
+        scope: core.workspace.isWorkspaceEnabled()
+          ? UiSettingScope.WORKSPACE
+          : UiSettingScope.GLOBAL,
+      },
+    });
+
+    core.uiSettings.register({
+      'observability:overviewCardsDisplay': {
+        name: 'Observability overview cards',
+        value: true,
+        description: 'Show the Observability overview page cards',
+        schema: schema.boolean(),
+        scope: core.workspace.isWorkspaceEnabled()
+          ? UiSettingScope.WORKSPACE
+          : UiSettingScope.GLOBAL,
       },
     });
 

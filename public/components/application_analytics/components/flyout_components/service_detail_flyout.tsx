@@ -23,10 +23,7 @@ import { ServiceObject } from '../../../../../public/components/trace_analytics/
 import { ServiceMap } from '../../../../../public/components/trace_analytics/components/services';
 import { SpanDetailTable } from '../../../../../public/components/trace_analytics/components/traces/span_detail_table';
 import { TraceAnalyticsComponentDeps } from '../../../../../public/components/trace_analytics/home';
-import {
-  handleServiceMapRequest,
-  handleServiceViewRequest,
-} from '../../../../../public/components/trace_analytics/requests/services_request_handler';
+import { handleServiceViewRequest } from '../../../../../public/components/trace_analytics/requests/services_request_handler';
 import { getListItem } from '../../helpers/utils';
 
 interface ServiceFlyoutProps extends TraceAnalyticsComponentDeps {
@@ -56,6 +53,7 @@ export function ServiceDetailFlyout(props: ServiceFlyoutProps) {
   const [serviceMapIdSelected, setServiceMapIdSelected] = useState<
     'latency' | 'error_rate' | 'throughput'
   >('latency');
+  const [isServicesDataLoading, setIsServicesDataLoading] = useState(false);
 
   const renderContent = useMemo(() => {
     if (!serviceName) return '-';
@@ -96,6 +94,7 @@ export function ServiceDetailFlyout(props: ServiceFlyoutProps) {
         <EuiHorizontalRule margin="s" />
         <ServiceMap
           serviceMap={serviceMap}
+          isServicesDataLoading={isServicesDataLoading}
           idSelected={serviceMapIdSelected}
           setIdSelected={setServiceMapIdSelected}
           currService={serviceName}
@@ -118,7 +117,7 @@ export function ServiceDetailFlyout(props: ServiceFlyoutProps) {
         />
       </>
     );
-  }, [serviceName, fields, serviceMap, DSL, serviceMapIdSelected]);
+  }, [isServicesDataLoading, serviceName, fields, serviceMap, DSL, serviceMapIdSelected]);
 
   useEffect(() => {
     const serviceDSL = filtersToDsl(
@@ -130,8 +129,17 @@ export function ServiceDetailFlyout(props: ServiceFlyoutProps) {
       'app',
       appConfigs
     );
-    handleServiceViewRequest(serviceName, http, serviceDSL, setFields, mode);
-    handleServiceMapRequest(http, serviceDSL, mode, '', setServiceMap, serviceName);
+
+    setIsServicesDataLoading(true);
+    handleServiceViewRequest(
+      serviceName,
+      http,
+      serviceDSL,
+      setFields,
+      mode,
+      setServiceMap
+    ).finally(() => setIsServicesDataLoading(false));
+
     const spanDSL = filtersToDsl(mode, filters, query, startTime, endTime, 'app', appConfigs);
     spanDSL.query.bool.filter.push({
       term: {

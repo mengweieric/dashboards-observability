@@ -14,13 +14,18 @@ import { HttpSetup } from '../../../../../../src/core/public';
 import { BarOrientation } from '../../../../common/constants/shared';
 import { TRACE_ANALYTICS_DATE_FORMAT } from '../../../../common/constants/trace_analytics';
 import { TraceAnalyticsMode, TraceQueryMode } from '../../../../common/types/trace_analytics';
-import { microToMilliSec, nanoToMilliSec } from '../components/common/helper_functions';
+import { coreRefs } from '../../../../public/framework/core_refs';
+import { MILI_TO_SEC } from '../components/common/constants';
+import {
+  getTimestampPrecision,
+  microToMilliSec,
+  nanoToMilliSec,
+  parseIsoToNano,
+} from '../components/common/helper_functions';
 import { SpanSearchParams } from '../components/traces/span_detail_table';
 import {
   getCustomIndicesTracesQuery,
   getPayloadQuery,
-  getServiceBreakdownQuery,
-  getSpanDetailQuery,
   getSpanFlyoutQuery,
   getSpansQuery,
   getTraceGroupPercentilesQuery,
@@ -33,54 +38,69 @@ export const handleCustomIndicesTracesRequest = async (
   DSL: any,
   items: any,
   setItems: (items: any) => void,
-  setColumns: (items: any) => void,
   mode: TraceAnalyticsMode,
+  pageIndex: number = 0,
+  pageSize: number = 10,
+  setTotalHits: any,
   dataSourceMDSId?: string,
   sort?: PropertySort,
   queryMode?: TraceQueryMode,
   isUnderOneHour?: boolean
 ) => {
-  const responsePromise = handleDslRequest(
-    http,
-    DSL,
-    getCustomIndicesTracesQuery(mode, undefined, sort, queryMode, isUnderOneHour),
-    mode,
-    dataSourceMDSId
-  );
+  try {
+    const response = await handleDslRequest(
+      http,
+      DSL,
+      getCustomIndicesTracesQuery(
+        mode,
+        undefined,
+        pageIndex,
+        pageSize,
+        sort,
+        queryMode,
+        isUnderOneHour
+      ),
+      mode,
+      dataSourceMDSId
+    );
 
-  return Promise.allSettled([responsePromise])
-    .then(([responseResult]) => {
-      if (responseResult.status === 'rejected') return Promise.reject(responseResult.reason);
+    const hits = response?.hits?.hits || [];
+    const totalHits = response?.hits?.total?.value ?? 0;
 
-      if (mode === 'data_prepper' || mode === 'custom_data_prepper') {
-        const keys = new Set();
-        const response = responseResult.value.hits.hits.map((val) => {
-          const source = omitBy(val._source, isArray || isObject);
-          Object.keys(source).forEach((key) => keys.add(key));
-          return { ...source };
-        });
+    setTotalHits(totalHits);
 
-        return [keys, response];
-      } else {
-        return [
-          [undefined],
-          responseResult.value.aggregations.traces.buckets.map((bucket: any) => {
-            return {
-              trace_id: bucket.key,
-              latency: bucket.latency.value,
-              last_updated: moment(bucket.last_updated.value).format(TRACE_ANALYTICS_DATE_FORMAT),
-              error_count: bucket.error_count.doc_count,
-              actions: '#',
-            };
-          }),
-        ];
-      }
-    })
-    .then((newItems) => {
-      setColumns([...newItems[0]]);
-      setItems(newItems[1]);
-    })
-    .catch((error) => console.error(error));
+    if (!hits.length) {
+      setItems([]);
+      return;
+    }
+
+    if (mode === 'data_prepper' || mode === 'custom_data_prepper') {
+      const keys = new Set();
+      const results = hits.map((val) => {
+        const source = omitBy(val._source, isArray || isObject);
+        Object.keys(source).forEach((key) => keys.add(key));
+        return { ...source };
+      });
+
+      setItems(results);
+    } else {
+      const buckets = response?.aggregations?.traces?.buckets || [];
+      const results = buckets.map((bucket: any) => ({
+        trace_id: bucket.key,
+        latency: bucket.latency.value,
+        last_updated: moment(bucket.last_updated.value).format(TRACE_ANALYTICS_DATE_FORMAT),
+        error_count: bucket.error_count.doc_count,
+        actions: '#',
+      }));
+      setItems(results);
+    }
+  } catch (error) {
+    console.error('Error in handleCustomIndicesTracesRequest:', error);
+    coreRefs.core?.notifications.toasts.addError(error, {
+      title: 'Failed to retrieve custom indices traces',
+      toastLifeTimeMs: 10000,
+    });
+  }
 };
 
 export const handleTracesRequest = async (
@@ -90,9 +110,11 @@ export const handleTracesRequest = async (
   items: any,
   setItems: (items: any) => void,
   mode: TraceAnalyticsMode,
+  maxTraces: number = 500,
   dataSourceMDSId?: string,
   sort?: PropertySort,
-  isUnderOneHour?: boolean
+  isUnderOneHour?: boolean,
+  setTotalHits?: (count: number) => void
 ) => {
   const binarySearch = (arr: number[], target: number) => {
     if (!arr) return Number.NaN;
@@ -110,7 +132,7 @@ export const handleTracesRequest = async (
   const responsePromise = handleDslRequest(
     http,
     DSL,
-    getTracesQuery(mode, undefined, sort, isUnderOneHour),
+    getTracesQuery(mode, undefined, maxTraces, sort, isUnderOneHour),
     mode,
     dataSourceMDSId
   );
@@ -133,15 +155,33 @@ export const handleTracesRequest = async (
           });
           return map;
         })
-      : Promise.reject('Only data_prepper mode supports percentile');
+      : Promise.resolve({});
 
   return Promise.allSettled([responsePromise, percentileRangesPromise])
     .then(([responseResult, percentileRangesResult]) => {
-      if (responseResult.status === 'rejected') return Promise.reject(responseResult.reason);
+      if (responseResult.status === 'rejected') {
+        setItems([]);
+        return;
+      }
+
       const percentileRanges =
         percentileRangesResult.status === 'fulfilled' ? percentileRangesResult.value : {};
       const response = responseResult.value;
-      return response.aggregations.traces.buckets.map((bucket: any) => {
+
+      if (setTotalHits) {
+        const totalHits = response?.hits?.total?.value ?? 0;
+        setTotalHits(totalHits);
+      }
+
+      if (
+        !response?.aggregations?.traces?.buckets ||
+        response.aggregations.traces.buckets.length === 0
+      ) {
+        setItems([]);
+        return;
+      }
+
+      const newItems = response.aggregations.traces.buckets.map((bucket: any) => {
         if (mode === 'data_prepper' || mode === 'custom_data_prepper') {
           return {
             trace_id: bucket.key,
@@ -164,119 +204,15 @@ export const handleTracesRequest = async (
           actions: '#',
         };
       });
-    })
-    .then((newItems) => {
       setItems(newItems);
     })
-    .catch((error) => console.error(error));
-};
-
-export const handleTraceViewRequest = (
-  traceId: string,
-  http: HttpSetup,
-  fields: {},
-  setFields: (fields: any) => void,
-  mode: TraceAnalyticsMode,
-  dataSourceMDSId?: string
-) => {
-  handleDslRequest(http, null, getTracesQuery(mode, traceId), mode, dataSourceMDSId)
-    .then(async (response) => {
-      const bucket = response.aggregations.traces.buckets[0];
-      return {
-        trace_id: bucket.key,
-        trace_group: bucket.trace_group.buckets[0]?.key,
-        last_updated: moment(bucket.last_updated.value).format(TRACE_ANALYTICS_DATE_FORMAT),
-        user_id: 'N/A',
-        latency: bucket.latency.value,
-        latency_vs_benchmark: 'N/A',
-        percentile_in_trace_group: 'N/A',
-        error_count: bucket.error_count.doc_count,
-        errors_vs_benchmark: 'N/A',
-      };
-    })
-    .then((newFields) => {
-      setFields(newFields);
-    })
-    .catch((error) => console.error(error));
-};
-
-// setColorMap sets serviceName to color mappings
-export const handleServicesPieChartRequest = async (
-  traceId: string,
-  http: HttpSetup,
-  setServiceBreakdownData: (serviceBreakdownData: any) => void,
-  setColorMap: (colorMap: any) => void,
-  mode: TraceAnalyticsMode,
-  dataSourceMDSId?: string
-) => {
-  const colors = [
-    '#7492e7',
-    '#c33d69',
-    '#2ea597',
-    '#8456ce',
-    '#e07941',
-    '#3759ce',
-    '#ce567c',
-    '#9469d6',
-    '#4066df',
-    '#da7596',
-    '#a783e1',
-    '#5978e3',
-  ];
-  const colorMap: any = {};
-  let index = 0;
-  await handleDslRequest(http, null, getServiceBreakdownQuery(traceId, mode), mode, dataSourceMDSId)
-    .then((response) =>
-      Promise.all(
-        response.aggregations.service_type.buckets.map((bucket: any) => {
-          colorMap[bucket.key] = colors[index++ % colors.length];
-          return {
-            name: bucket.key,
-            color: colorMap[bucket.key],
-            value: bucket.total_latency.value,
-            benchmark: 0,
-          };
-        })
-      )
-    )
-    .then((newItems) => {
-      const latencySum = newItems.map((item) => item.value).reduce((a, b) => a + b, 0);
-      return [
-        {
-          values: newItems.map((item) =>
-            latencySum === 0 ? 100 : (item.value / latencySum) * 100
-          ),
-          labels: newItems.map((item) => item.name),
-          benchmarks: newItems.map((item) => item.benchmark),
-          marker: {
-            colors: newItems.map((item) => item.color),
-          },
-          type: 'pie',
-          textinfo: 'none',
-          hovertemplate: '%{label}<br>%{value:.2f}%<extra></extra>',
-        },
-      ];
-    })
-    .then((newItems) => {
-      setServiceBreakdownData(newItems);
-      setColorMap(colorMap);
-    })
-    .catch((error) => console.error(error));
-};
-
-export const handleSpansGanttRequest = (
-  traceId: string,
-  http: HttpSetup,
-  setSpanDetailData: (spanDetailData: any) => void,
-  colorMap: any,
-  spanFiltersDSL: any,
-  mode: TraceAnalyticsMode,
-  dataSourceMDSId?: string
-) => {
-  handleDslRequest(http, spanFiltersDSL, getSpanDetailQuery(mode, traceId), mode, dataSourceMDSId)
-    .then((response) => hitsToSpanDetailData(response.hits.hits, colorMap, mode))
-    .then((newItems) => setSpanDetailData(newItems))
-    .catch((error) => console.error(error));
+    .catch((error) => {
+      console.error('Error in handleTracesRequest:', error);
+      coreRefs.core?.notifications.toasts.addError(error, {
+        title: 'Failed to retrieve traces',
+        toastLifeTimeMs: 10000,
+      });
+    });
 };
 
 export const handleSpansFlyoutRequest = (
@@ -286,14 +222,20 @@ export const handleSpansFlyoutRequest = (
   mode: TraceAnalyticsMode,
   dataSourceMDSId?: string
 ) => {
-  handleDslRequest(http, null, getSpanFlyoutQuery(mode, spanId), mode, dataSourceMDSId)
+  return handleDslRequest(http, null, getSpanFlyoutQuery(mode, spanId), mode, dataSourceMDSId)
     .then((response) => {
       setItems(response?.hits.hits?.[0]?._source);
     })
-    .catch((error) => console.error(error));
+    .catch((error) => {
+      console.error('Error in handleSpansFlyoutRequest:', error);
+      coreRefs.core?.notifications.toasts.addError(error, {
+        title: `Failed to retrieve span details for span ID: ${spanId}`,
+        toastLifeTimeMs: 10000,
+      });
+    });
 };
 
-const hitsToSpanDetailData = async (hits: any, colorMap: any, mode: TraceAnalyticsMode) => {
+export const hitsToSpanDetailData = async (hits: any, colorMap: any, mode: TraceAnalyticsMode) => {
   const data: { gantt: any[]; table: any[]; ganttMaxX: number } = {
     gantt: [],
     table: [],
@@ -301,17 +243,35 @@ const hitsToSpanDetailData = async (hits: any, colorMap: any, mode: TraceAnalyti
   };
   if (hits.length === 0) return data;
 
-  const minStartTime =
-    mode === 'jaeger'
-      ? microToMilliSec(hits[hits.length - 1].sort[0])
-      : nanoToMilliSec(hits[hits.length - 1].sort[0]);
+  const timestampPrecision = getTimestampPrecision(hits[hits.length - 1].sort[0]);
+
+  const minStartTime = (() => {
+    switch (timestampPrecision) {
+      case 'micros':
+        return microToMilliSec(hits[hits.length - 1].sort[0]);
+      case 'nanos':
+        return nanoToMilliSec(hits[hits.length - 1].sort[0]);
+      default:
+        // 'millis'
+        return hits[hits.length - 1].sort[0];
+    }
+  })();
+
   let maxEndTime = 0;
 
   hits.forEach((hit: any) => {
-    const startTime =
-      mode === 'jaeger'
-        ? microToMilliSec(hit.sort[0]) - minStartTime
-        : nanoToMilliSec(hit.sort[0]) - minStartTime;
+    const startTime = (() => {
+      switch (timestampPrecision) {
+        case 'micros':
+          return microToMilliSec(hit.sort[0]) - minStartTime;
+        case 'nanos':
+          return nanoToMilliSec(hit.sort[0]) - minStartTime;
+        default:
+          // 'millis'
+          return hit.sort[0] - minStartTime;
+      }
+    })();
+
     const duration =
       mode === 'jaeger'
         ? round(microToMilliSec(hit._source.duration), 2)
@@ -377,17 +337,62 @@ const hitsToSpanDetailData = async (hits: any, colorMap: any, mode: TraceAnalyti
   return data;
 };
 
+interface Hit {
+  _index: string;
+  _id: string;
+  _score: number;
+  _source: any;
+  sort?: any[];
+}
+
+interface ParsedResponse {
+  hits?: {
+    hits: Hit[];
+  };
+  [key: string]: any;
+}
+
+export function normalizePayload(parsed: ParsedResponse): Hit[] {
+  if (parsed.hits && Array.isArray(parsed.hits.hits)) {
+    return parsed.hits.hits;
+  }
+  return [];
+}
+
 export const handlePayloadRequest = (
   traceId: string,
   http: HttpSetup,
-  payloadData: any,
+  spanDSL: any,
   setPayloadData: (payloadData: any) => void,
   mode: TraceAnalyticsMode,
   dataSourceMDSId?: string
 ) => {
-  handleDslRequest(http, null, getPayloadQuery(mode, traceId), mode, dataSourceMDSId)
-    .then((response) => setPayloadData(JSON.stringify(response.hits.hits, null, 2)))
-    .catch((error) => console.error(error));
+  return handleDslRequest(http, spanDSL, getPayloadQuery(mode, traceId), mode, dataSourceMDSId)
+    .then((response) => {
+      const normalizedData = normalizePayload(response);
+      const sortedData = normalizedData
+        .map((hit) => {
+          const time =
+            mode === 'jaeger'
+              ? Number(hit._source.startTime) * MILI_TO_SEC
+              : parseIsoToNano(hit._source.startTime);
+
+          return {
+            ...hit,
+            sort: hit.sort && hit.sort[0] ? hit.sort : [time],
+          };
+        })
+        .sort((a, b) => b.sort[0] - a.sort[0]); // Sort in descending order by the sort field
+
+      setPayloadData(JSON.stringify(sortedData, null, 2));
+    })
+    .catch((error) => {
+      console.error('Error in handlePayloadRequest:', error);
+      coreRefs.core?.notifications.toasts.addError(error, {
+        title: `Failed to retrieve payload for trace ID: ${traceId}`,
+        toastLifeTimeMs: 10000,
+      });
+    });
 };
 
 export const handleSpansRequest = (
@@ -399,10 +404,16 @@ export const handleSpansRequest = (
   mode: TraceAnalyticsMode,
   dataSourceMDSId?: string
 ) => {
-  handleDslRequest(http, DSL, getSpansQuery(spanSearchParams), mode, dataSourceMDSId)
+  return handleDslRequest(http, DSL, getSpansQuery(spanSearchParams), mode, dataSourceMDSId)
     .then((response) => {
       setItems(response.hits.hits.map((hit: any) => hit._source));
       setTotal(response.hits.total?.value || 0);
     })
-    .catch((error) => console.error(error));
+    .catch((error) => {
+      console.error('Error in handleSpansRequest:', error);
+      coreRefs.core?.notifications.toasts.addError(error, {
+        title: 'Failed to retrieve spans',
+        toastLifeTimeMs: 10000,
+      });
+    });
 };

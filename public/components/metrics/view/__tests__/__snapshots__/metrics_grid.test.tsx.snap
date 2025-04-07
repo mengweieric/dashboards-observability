@@ -30,6 +30,9 @@ exports[`Metrics Grid Component renders Metrics Grid Component 1`] = `
         "getHelpExtension$": [MockFunction],
         "getIsNavDrawerLocked$": [MockFunction],
         "getIsVisible$": [MockFunction],
+        "globalSearch": Object {
+          "getAllSearchCommands": [MockFunction],
+        },
         "logos": Object {
           "AnimatedMark": Object {
             "dark": Object {
@@ -97,10 +100,12 @@ exports[`Metrics Grid Component renders Metrics Grid Component 1`] = `
           "getCenter$": [MockFunction],
           "getLeft$": [MockFunction],
           "getLeftBottom$": [MockFunction],
+          "getPrimaryHeaderRight$": [MockFunction],
           "getRight$": [MockFunction],
           "registerCenter": [MockFunction],
           "registerLeft": [MockFunction],
           "registerLeftBottom": [MockFunction],
+          "registerPrimaryHeaderRight": [MockFunction],
           "registerRight": [MockFunction],
         },
         "navGroup": Object {
@@ -204,6 +209,9 @@ exports[`Metrics Grid Component renders Metrics Grid Component 1`] = `
           "getHelpExtension$": [MockFunction],
           "getIsNavDrawerLocked$": [MockFunction],
           "getIsVisible$": [MockFunction],
+          "globalSearch": Object {
+            "getAllSearchCommands": [MockFunction],
+          },
           "logos": Object {
             "AnimatedMark": Object {
               "dark": Object {
@@ -271,10 +279,12 @@ exports[`Metrics Grid Component renders Metrics Grid Component 1`] = `
             "getCenter$": [MockFunction],
             "getLeft$": [MockFunction],
             "getLeftBottom$": [MockFunction],
+            "getPrimaryHeaderRight$": [MockFunction],
             "getRight$": [MockFunction],
             "registerCenter": [MockFunction],
             "registerLeft": [MockFunction],
             "registerLeftBottom": [MockFunction],
+            "registerPrimaryHeaderRight": [MockFunction],
             "registerRight": [MockFunction],
           },
           "navGroup": Object {

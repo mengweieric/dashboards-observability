@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { COMMAND_TIMEOUT_LONG, suppressResizeObserverIssue, delay } from '../constants';
+import { COMMAND_TIMEOUT_LONG, suppressResizeObserverIssue } from '../constants';
 
 export const clearQuerySearchBoxText = (testSubjectName) => {
   cy.get(`[data-test-subj="${testSubjectName}"]`, {
@@ -19,7 +19,8 @@ export const querySearch = (query, rangeSelected) => {
   suppressResizeObserverIssue();
   cy.get('[data-test-subj="superDatePickerToggleQuickMenuButton"]').click();
   cy.get(rangeSelected).click();
-  cy.get('[data-test-subj="superDatePickerApplyTimeButton"]').contains('Refresh').click();
+  cy.get('[data-test-subj="superDatePickerApplyTimeButton"]').click();
+  cy.get('[data-test-subj="globalLoadingIndicator"]').should('not.exist');
 };
 
 export const landOnEventHome = () => {
@@ -30,6 +31,7 @@ export const landOnEventExplorer = () => {
   cy.visit(
     `${Cypress.env('opensearchDashboards')}/app/observability-logs#/explorer`
   );
+  cy.get('[data-test-subj="globalLoadingIndicator"]').should('not.exist');
 };
 
 export const landOnEventVisualizations = () => {
@@ -44,7 +46,6 @@ export const landOnPanels = () => {
   cy.visit(
     `${Cypress.env('opensearchDashboards')}/app/observability-dashboards#/`
   );
-  cy.wait(delay);
 };
 
 const vis_name_sub_string = Math.floor(Math.random() * 100);
@@ -58,7 +59,6 @@ export const saveVisualizationAndVerify = () => {
     .eq(1)
     .type(`Test visualization` + vis_name_sub_string, { force: true });
   cy.get('[data-test-subj="eventExplorer__querySaveConfirm"]').click({ force: true });
-  cy.wait(delay);
   cy.get('.euiHeaderBreadcrumbs a').eq(1).click({ force: true });
   cy.get('.euiFlexGroup .euiFormControlLayout__childrenWrapper input')
     .eq(0)
